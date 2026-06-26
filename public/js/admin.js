@@ -97,7 +97,7 @@ $('#btnAltaEmp').onclick = async () => {
   const regimen = $('#empRegimen').value;
   if (!nombre) return toast('Falta el nombre', 'bad');
   try {
-    await api('/api/admin/empleados', { method: 'POST', body: { nombre, regimen } });
+    await api('/api/admin/empleados', { method: 'POST', body: { nombre, regimen, dias_vacaciones: $('#admDiasVac').value, dias_asuntos: $('#admDiasAsu').value } });
     toast('Empleado dado de alta ✓ Creará su PIN al fichar', 'ok'); $('#admNombre').value = '';
     cargarEmpleados();
   } catch { toast('No se pudo dar de alta', 'bad'); }
@@ -117,11 +117,13 @@ async function cargarEmpleados() {
   if (!activos.length) {
     $('#listaEmp').innerHTML = '<p class="muted">Sin empleados activos. Añade el primero arriba.</p>';
   } else {
-    let h = '<table><thead><tr><th>Nombre</th><th>Jornada</th><th>Estado</th><th>PIN</th><th>Acciones</th></tr></thead><tbody>';
+    let h = '<table><thead><tr><th>Nombre</th><th>Jornada</th><th>Estado</th><th>PIN</th><th>Vac./Asuntos</th><th>Acciones</th></tr></thead><tbody>';
     for (const e of activos) {
       const pinEstado = e.pin_configurado ? 'Configurado' : '<span class="estado-pill est-pendiente">Sin configurar</span>';
       h += `<tr><td><b>${e.nombre}</b></td><td class="muted">${e.regimen}</td><td>${e.estado}</td><td>${pinEstado}</td>
+        <td class="muted">${e.dias_vacaciones ?? 22} / ${e.dias_asuntos ?? 0} días</td>
         <td>
+          <button class="btn btn-ghost btn-sm" data-dias="${e.id}">Editar días</button>
           <button class="btn btn-ghost btn-sm" data-resetpin="${e.id}">Restablecer PIN</button>
           <button class="btn btn-ghost btn-sm" data-act="${e.id}" data-val="0">Dar de baja</button>
         </td></tr>`;
@@ -146,6 +148,15 @@ async function cargarEmpleados() {
     if (!confirm('¿Restablecer el PIN de este empleado? Tendrá que crear uno nuevo la próxima vez que fiche. Tú no verás el PIN.')) return;
     await api(`/api/admin/empleados/${b.dataset.resetpin}/reset-pin`, { method: 'POST' });
     toast('PIN restablecido ✓ El empleado creará uno nuevo', 'ok'); cargarEmpleados();
+  });
+  document.querySelectorAll('#listaEmp [data-dias]').forEach(b => b.onclick = async () => {
+    const e = activos.find(x => x.id == b.dataset.dias);
+    const vac = prompt('Días de vacaciones al año:', e?.dias_vacaciones ?? 22);
+    if (vac == null) return;
+    const asu = prompt('Días de asuntos propios al año:', e?.dias_asuntos ?? 0);
+    if (asu == null) return;
+    await api(`/api/admin/empleados/${b.dataset.dias}`, { method: 'POST', body: { dias_vacaciones: vac, dias_asuntos: asu } });
+    toast('Días actualizados ✓', 'ok'); cargarEmpleados();
   });
   document.querySelectorAll('#listaEmp [data-act], #listaBaja [data-act]').forEach(b => b.onclick = async () => {
     const alta = b.dataset.val === '1';

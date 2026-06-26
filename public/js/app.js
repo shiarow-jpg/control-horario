@@ -38,13 +38,12 @@ document.querySelectorAll('.tab').forEach(tab => {
   };
 });
 
-// ---- Subvista "Mis fichajes" (dentro de la pestaña Fichaje) ----
-let mfIniciado = false;
+// ---- Subvista "Mi cuenta" (dentro de la pestaña Fichaje) ----
 $('#btnMisFichajes').onclick = () => {
   $('#vistaEmpleados').classList.add('hidden');
   $('#vistaFichar').classList.add('hidden');
   $('#vistaMisFichajes').classList.remove('hidden');
-  if (!mfIniciado) { initMisFichajes(); mfIniciado = true; }
+  initMisFichajes(); // reinicia la puerta (pide PIN) cada vez
 };
 $('#mfVolver').onclick = () => {
   $('#vistaMisFichajes').classList.add('hidden');

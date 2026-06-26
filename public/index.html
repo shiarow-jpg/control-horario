@@ -72,11 +72,19 @@
           <h1 style="margin:0">Mi cuenta</h1>
           <button class="btn btn-ghost btn-sm" id="mfVolver">← Volver</button>
         </div>
-        <p class="sub">Consulta tus fichajes y gestiona tus solicitudes. Identifícate con tu PIN.</p>
-        <div class="row">
-          <div><label>Empleado/a</label><select id="mfEmpleado"></select></div>
-          <div><label>PIN</label><input id="mfPin" type="password" inputmode="numeric" maxlength="4" placeholder="4 dígitos" /></div>
+        <!-- Identificación: primero el PIN -->
+        <div id="mfAuth">
+          <p class="sub">Identifícate con tu PIN para ver tus fichajes y gestionar tus solicitudes.</p>
+          <div class="row">
+            <div><label>Empleado/a</label><select id="mfEmpleado"></select></div>
+            <div><label>PIN</label><input id="mfPin" type="password" inputmode="numeric" maxlength="4" placeholder="4 dígitos" /></div>
+            <div style="flex:0"><button class="btn btn-primary btn-sm" id="mfEntrar" style="margin-top:24px">Entrar</button></div>
+          </div>
         </div>
+
+        <!-- Contenido (visible solo tras introducir el PIN correcto) -->
+        <div id="mfContenido" class="hidden">
+        <p class="sub"><b id="mfQuien"></b> · <a href="#" id="mfSalir">Cambiar de empleado</a></p>
 
         <div class="subtabs mt">
           <button class="subtab active" data-ss="fichajes">Mis fichajes</button>
@@ -127,6 +135,7 @@
         <!-- Pedir ausencia -->
         <div id="ss-ausencia" class="ss-pane hidden">
           <p class="sub">Solicita vacaciones o una ausencia. El administrador la aprobará o denegará.</p>
+          <div id="ausSaldo" class="banner hidden"></div>
           <div class="row">
             <div><label>Tipo</label>
               <select id="ausTipo">
@@ -167,7 +176,7 @@
 
         <!-- Cambiar PIN -->
         <div id="ss-pin" class="ss-pane hidden">
-          <p class="sub">Cambia tu PIN. Necesitas tu PIN actual. (El de arriba no hace falta aquí.)</p>
+          <p class="sub">Cambia tu PIN. Necesitas tu PIN actual.</p>
           <div class="row">
             <div><label>PIN actual</label><input id="cpaActual" type="password" inputmode="numeric" maxlength="4" placeholder="actual" /></div>
             <div><label>Nuevo PIN</label><input id="cpaNuevo" type="password" inputmode="numeric" maxlength="4" placeholder="nuevo" /></div>
@@ -175,6 +184,7 @@
           </div>
           <button class="btn btn-primary btn-sm mt" id="cpaGuardar">Cambiar PIN</button>
         </div>
+        </div><!-- /mfContenido -->
       </div>
     </section>
 
@@ -192,7 +202,7 @@
 
       <div id="vistaLogin" class="card pad hidden" style="max-width:440px;margin:0 auto">
         <h1>Administración</h1>
-        <p class="sub">Introduce la contraseña de administrador. Se pide cada vez que entras en esta pestaña.</p>
+        <p class="sub">Introduce la contraseña de administrador.</p>
         <label>Contraseña</label>
         <input id="loginPass" type="password" />
         <button class="btn btn-primary btn-sm mt" id="btnLogin">Entrar</button>
@@ -214,10 +224,12 @@
 
         <div class="card pad mb">
           <h2>Empleados</h2>
-          <p class="sub">Das de alta solo el nombre. Cada empleado <b>crea su propio PIN</b> la primera vez que ficha; tú nunca lo conoces.</p>
+          <p class="sub">Da de alta a cada empleado con su nombre. El PIN es personal: lo establece cada empleado en su primer fichaje.</p>
           <div class="row">
             <div><label>Nombre</label><input id="admNombre" placeholder="Nombre y apellido" /></div>
             <div><label>Jornada</label><select id="empRegimen"><option value="completa">Completa</option><option value="parcial">Parcial</option></select></div>
+            <div><label>Vacaciones (días/año)</label><input id="admDiasVac" type="number" min="0" value="22" /></div>
+            <div><label>Asuntos propios (días/año)</label><input id="admDiasAsu" type="number" min="0" value="0" /></div>
             <div style="flex:0"><button class="btn btn-primary btn-sm" id="btnAltaEmp" style="margin-top:24px">Alta</button></div>
           </div>
           <div id="listaEmp" class="mt"></div>
@@ -236,7 +248,7 @@
               <option value="todas">Todas</option>
             </select>
           </div>
-          <p class="sub">Solicitudes de los empleados (correcciones de fichaje y ausencias). Apruébalas o deniégalas; todo queda registrado.</p>
+          <p class="sub">Correcciones de fichaje y ausencias solicitadas por los empleados. Revísalas para aprobarlas o denegarlas.</p>
           <div id="listaSolic"></div>
         </div>
 

@@ -119,12 +119,35 @@ async function verMisSolicitudes() {
   } catch (e) { toast(e.data?.error === 'pin_incorrecto' ? 'PIN incorrecto' : 'No se pudo cargar', 'bad'); }
 }
 
+// ---- Saldo de vacaciones / asuntos propios ----
+let saldoCache = null;
+async function cargarSaldo() {
+  try { saldoCache = await api('/api/solicitudes/saldo', { method: 'POST', body: auth() }); }
+  catch { saldoCache = null; }
+  pintarSaldo();
+}
+function pintarSaldo() {
+  const el = $('#ausSaldo'), tipo = $('#ausTipo').value;
+  if (!saldoCache || (tipo !== 'vacaciones' && tipo !== 'asuntos_propios')) { el.classList.add('hidden'); return; }
+  const s = tipo === 'vacaciones' ? saldoCache.vacaciones : saldoCache.asuntos_propios;
+  const nombre = tipo === 'vacaciones' ? 'vacaciones' : 'asuntos propios';
+  el.innerHTML = `Te quedan <b>${s.restantes}</b> de ${s.total} días de ${nombre} (año ${saldoCache.anio}). Usados: ${s.usados}.`;
+  el.classList.remove('hidden');
+}
+
+// Vuelve a la puerta (pide PIN), oculta el contenido.
+function mostrarGate() {
+  $('#mfAuth').classList.remove('hidden');
+  $('#mfContenido').classList.add('hidden');
+  $('#mfPin').value = '';
+}
+
 let wired = false;
 export async function initMisFichajes() {
   $('#mfDesde').value = inicioMesLocalStr();
   $('#mfHasta').value = hoyLocalStr();
   $('#mfResultado').innerHTML = '';
-  $('#mfPin').value = '';
+  mostrarGate(); // siempre se empieza por el PIN
   try {
     const { empleados } = await api('/api/fichaje/empleados');
     $('#mfEmpleado').innerHTML = empleados.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
@@ -133,17 +156,39 @@ export async function initMisFichajes() {
   if (wired) return;
   wired = true;
 
+  // Puerta de entrada: validar el PIN y, si es correcto, mostrar el contenido.
+  const entrar = async () => {
+    if (!pinOk()) return;
+    try {
+      const r = await api('/api/fichaje/verificar-pin', { method: 'POST', body: auth() });
+      $('#mfQuien').textContent = r.nombre;
+      $('#mfAuth').classList.add('hidden');
+      $('#mfContenido').classList.remove('hidden');
+      document.querySelectorAll('#vistaMisFichajes .subtab').forEach((x, i) => x.classList.toggle('active', i === 0));
+      for (const pane of ['fichajes', 'correccion', 'ausencia', 'solicitudes', 'pin'])
+        $('#ss-' + pane).classList.toggle('hidden', pane !== 'fichajes');
+      consultar();
+    } catch (e) {
+      const err = e.data?.error;
+      toast(err === 'pin_no_configurado' ? 'Aún no tienes PIN. Créalo en la pantalla de fichar.'
+        : err === 'pin_incorrecto' ? 'PIN incorrecto' : 'No se pudo entrar', 'bad');
+    }
+  };
+  $('#mfEntrar').onclick = entrar;
+  $('#mfPin').addEventListener('keydown', e => { if (e.key === 'Enter') entrar(); });
+  $('#mfSalir').onclick = (e) => { e.preventDefault(); mostrarGate(); };
+
   // sub-pestañas
   document.querySelectorAll('#vistaMisFichajes .subtab').forEach(t => t.onclick = () => {
     document.querySelectorAll('#vistaMisFichajes .subtab').forEach(x => x.classList.toggle('active', x === t));
     for (const pane of ['fichajes', 'correccion', 'ausencia', 'solicitudes', 'pin'])
       $('#ss-' + pane).classList.toggle('hidden', pane !== t.dataset.ss);
     if (t.dataset.ss === 'solicitudes') verMisSolicitudes();
+    if (t.dataset.ss === 'ausencia') cargarSaldo();
   });
 
   $('#mfConsultar').onclick = consultar;
   $('#mfPdf').onclick = descargarPdf;
-  $('#mfPin').addEventListener('keydown', e => { if (e.key === 'Enter') consultar(); });
 
   // corrección: toggle añadir/anular
   $('#corrAccion').onchange = () => {
@@ -155,7 +200,10 @@ export async function initMisFichajes() {
   $('#corrEnviar').onclick = enviarCorreccion;
 
   // ausencia: mostrar subtipo solo en permiso retribuido
-  $('#ausTipo').onchange = () => $('#ausSubWrap').classList.toggle('hidden', $('#ausTipo').value !== 'permiso_retribuido');
+  $('#ausTipo').onchange = () => {
+    $('#ausSubWrap').classList.toggle('hidden', $('#ausTipo').value !== 'permiso_retribuido');
+    pintarSaldo();
+  };
   $('#ausEnviar').onclick = enviarAusencia;
 
   $('#ssRefrescar').onclick = verMisSolicitudes;

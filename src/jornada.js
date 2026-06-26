@@ -59,14 +59,14 @@ export const TRANSICIONES = {
 };
 
 export function getEmpleados({ soloActivos = false } = {}) {
-  const sql = `SELECT id, nombre, regimen, activo, creado_en,
+  const sql = `SELECT id, nombre, regimen, activo, creado_en, dias_vacaciones, dias_asuntos,
                CASE WHEN pin_hash IS NOT NULL AND pin_hash != '' THEN 1 ELSE 0 END AS pin_configurado
                FROM empleados ${soloActivos ? 'WHERE activo = 1' : ''} ORDER BY nombre COLLATE NOCASE`;
   return db.prepare(sql).all();
 }
 
 export function getEmpleado(id) {
-  return db.prepare('SELECT id, nombre, regimen, activo, creado_en FROM empleados WHERE id = ?').get(id);
+  return db.prepare('SELECT id, nombre, regimen, activo, creado_en, dias_vacaciones, dias_asuntos FROM empleados WHERE id = ?').get(id);
 }
 
 // Conjunto de ids de eventos que han sido anulados (para excluirlos del computo).
@@ -188,6 +188,30 @@ export function formatear(s) {
     r.detalle = `${ETIQUETA_AUSENCIA[s.aus_tipo] || s.aus_tipo}${s.aus_subtipo ? ' · ' + (ETIQUETA_SUBTIPO[s.aus_subtipo] || s.aus_subtipo) : ''} · ${s.aus_desde}${s.aus_hasta && s.aus_hasta !== s.aus_desde ? ' a ' + s.aus_hasta : ''}${s.aus_horas ? ' (' + s.aus_horas + ')' : ''}`;
   }
   return r;
+}
+
+// Saldo de días de vacaciones y asuntos propios del año en curso.
+// "Usados" = días naturales de las ausencias APROBADAS de ese tipo este año.
+function diasEntre(desde, hasta) {
+  const a = new Date(desde + 'T00:00:00Z'), b = new Date((hasta || desde) + 'T00:00:00Z');
+  return Math.max(1, Math.floor((b - a) / 86400000) + 1);
+}
+export function getSaldoAusencias(empleadoId) {
+  const emp = db.prepare('SELECT dias_vacaciones, dias_asuntos FROM empleados WHERE id = ?').get(empleadoId) || {};
+  const anio = hoyLocal().slice(0, 4);
+  const usados = (tipo) => {
+    const rows = db.prepare(`SELECT aus_desde, aus_hasta FROM solicitudes
+      WHERE empleado_id = ? AND clase = 'ausencia' AND estado = 'aprobada' AND aus_tipo = ? AND aus_desde LIKE ?`)
+      .all(empleadoId, tipo, anio + '-%');
+    return rows.reduce((s, r) => s + diasEntre(r.aus_desde, r.aus_hasta), 0);
+  };
+  const totalVac = emp.dias_vacaciones ?? 22, totalAsu = emp.dias_asuntos ?? 0;
+  const uVac = usados('vacaciones'), uAsu = usados('asuntos_propios');
+  return {
+    anio,
+    vacaciones: { total: totalVac, usados: uVac, restantes: Math.max(0, totalVac - uVac) },
+    asuntos_propios: { total: totalAsu, usados: uAsu, restantes: Math.max(0, totalAsu - uAsu) },
+  };
 }
 
 // Formatea segundos como "Hh Mm".

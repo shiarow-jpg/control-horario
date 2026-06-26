@@ -145,9 +145,12 @@ export function generarInformePDF(stream, { empleado, desde, hasta }) {
   doc.fontSize(8).font('Helvetica').fillColor('#555');
   doc.text('—'.repeat(60));
   doc.text(`Huella de verificación (SHA-256): ${huella}`);
-  doc.text(`Integridad de la cadena de registros: ${cadena.ok ? 'CORRECTA' : 'ALTERADA en seq ' + cadena.roto_en}`);
-  doc.text('Este documento es un extracto del registro inmutable. Cualquier modificación de los datos originales');
-  doc.text('rompe la cadena de hashes y resulta detectable. Conservación legal: 4 años.');
+  doc.text(`Verificación de integridad del registro: ${cadena.ok ? 'CORRECTA' : 'ALTERADA en el asiento ' + cadena.roto_en}`);
+  doc.moveDown(0.3);
+  doc.text('Documento emitido conforme al artículo 34.9 del Estatuto de los Trabajadores y al Real Decreto-ley 8/2019.');
+  doc.text('El registro de jornada es íntegro e inalterable: cualquier modificación de los asientos originales altera la');
+  doc.text('huella de verificación y resulta detectable. Los datos se conservan durante cuatro años a disposición de la');
+  doc.text('persona trabajadora, de sus representantes legales y de la Inspección de Trabajo y Seguridad Social.');
   doc.fillColor('#000');
 
   doc.end();

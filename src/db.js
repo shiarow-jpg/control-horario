@@ -11,12 +11,14 @@ db.exec('PRAGMA foreign_keys = ON;');
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS empleados (
-  id          INTEGER PRIMARY KEY,
-  nombre      TEXT NOT NULL,
-  pin_hash    TEXT NOT NULL,
-  regimen     TEXT DEFAULT 'completa',
-  activo      INTEGER NOT NULL DEFAULT 1,
-  creado_en   TEXT NOT NULL
+  id              INTEGER PRIMARY KEY,
+  nombre          TEXT NOT NULL,
+  pin_hash        TEXT NOT NULL,
+  regimen         TEXT DEFAULT 'completa',
+  activo          INTEGER NOT NULL DEFAULT 1,
+  creado_en       TEXT NOT NULL,
+  dias_vacaciones INTEGER DEFAULT 22,
+  dias_asuntos    INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS dispositivos (
@@ -84,6 +86,11 @@ CREATE TABLE IF NOT EXISTS solicitudes (
 CREATE INDEX IF NOT EXISTS idx_solic_estado ON solicitudes(estado, creada_en);
 CREATE INDEX IF NOT EXISTS idx_solic_emp ON solicitudes(empleado_id, creada_en);
 `);
+
+// Migraciones suaves: anaden columnas a BDs ya creadas (no falla si ya existen).
+for (const [col, def] of [['dias_vacaciones', 'INTEGER DEFAULT 22'], ['dias_asuntos', 'INTEGER DEFAULT 0']]) {
+  try { db.exec(`ALTER TABLE empleados ADD COLUMN ${col} ${def}`); } catch { /* la columna ya existe */ }
+}
 
 // ----- Helpers de config -----
 export function getConfig(clave, def = null) {

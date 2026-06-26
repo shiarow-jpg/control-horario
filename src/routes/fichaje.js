@@ -30,6 +30,15 @@ fichajeRouter.post('/configurar-pin', (req, res) => {
   res.json({ ok: true });
 });
 
+// Verificar el PIN (puerta de entrada de "Mi cuenta").
+fichajeRouter.post('/verificar-pin', (req, res) => {
+  const emp = db.prepare('SELECT id, nombre, pin_hash FROM empleados WHERE id = ? AND activo = 1').get(Number(req.body?.empleado_id));
+  if (!emp) return res.status(404).json({ error: 'empleado_no_encontrado' });
+  if (!emp.pin_hash) return res.status(409).json({ error: 'pin_no_configurado' });
+  if (!checkSecret(req.body?.pin, emp.pin_hash)) return res.status(401).json({ error: 'pin_incorrecto' });
+  res.json({ ok: true, nombre: emp.nombre });
+});
+
 // Cambiar el PIN (requiere el PIN actual). Lo hace el propio empleado.
 fichajeRouter.post('/cambiar-pin', (req, res) => {
   const emp = db.prepare('SELECT * FROM empleados WHERE id = ? AND activo = 1').get(Number(req.body?.empleado_id));

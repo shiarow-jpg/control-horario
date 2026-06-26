@@ -82,9 +82,11 @@ adminRouter.post('/empleados', requireAdmin, (req, res) => {
   const nombre = String(req.body?.nombre || '').trim();
   const regimen = String(req.body?.regimen || 'completa');
   if (!nombre) return res.status(400).json({ error: 'nombre_requerido' });
+  const dv = Math.max(0, parseInt(req.body?.dias_vacaciones) || 22);
+  const da = Math.max(0, parseInt(req.body?.dias_asuntos) || 0);
   // Sin PIN: lo crea el propio empleado la primera vez que ficha (el admin no lo conoce).
-  const info = db.prepare(`INSERT INTO empleados (nombre, pin_hash, regimen, activo, creado_en)
-              VALUES (?, '', ?, 1, ?)`).run(nombre, regimen, new Date().toISOString());
+  const info = db.prepare(`INSERT INTO empleados (nombre, pin_hash, regimen, activo, creado_en, dias_vacaciones, dias_asuntos)
+              VALUES (?, '', ?, 1, ?, ?, ?)`).run(nombre, regimen, new Date().toISOString(), dv, da);
   res.json({ ok: true, id: info.lastInsertRowid });
 });
 
@@ -94,8 +96,10 @@ adminRouter.post('/empleados/:id', requireAdmin, (req, res) => {
   const nombre = req.body?.nombre != null ? String(req.body.nombre).trim() : emp.nombre;
   const regimen = req.body?.regimen != null ? String(req.body.regimen) : emp.regimen;
   const activo = req.body?.activo != null ? (req.body.activo ? 1 : 0) : emp.activo;
-  db.prepare('UPDATE empleados SET nombre = ?, regimen = ?, activo = ? WHERE id = ?')
-    .run(nombre, regimen, activo, emp.id);
+  const dv = req.body?.dias_vacaciones != null ? Math.max(0, parseInt(req.body.dias_vacaciones) || 0) : emp.dias_vacaciones;
+  const da = req.body?.dias_asuntos != null ? Math.max(0, parseInt(req.body.dias_asuntos) || 0) : emp.dias_asuntos;
+  db.prepare('UPDATE empleados SET nombre = ?, regimen = ?, activo = ?, dias_vacaciones = ?, dias_asuntos = ? WHERE id = ?')
+    .run(nombre, regimen, activo, dv, da, emp.id);
   res.json({ ok: true });
 });
 

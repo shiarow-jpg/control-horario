@@ -4,7 +4,7 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import { checkSecret } from '../security.js';
 import { requireDevice } from '../auth.js';
-import { TIPOS_MARCAJE, TIPOS_AUSENCIA, SUBTIPOS_PERMISO, formatear } from '../jornada.js';
+import { TIPOS_MARCAJE, TIPOS_AUSENCIA, SUBTIPOS_PERMISO, formatear, getSaldoAusencias } from '../jornada.js';
 
 export const solicitudesRouter = Router();
 solicitudesRouter.use(requireDevice);
@@ -77,6 +77,13 @@ solicitudesRouter.post('/ausencia', (req, res) => {
   };
   const info = insertSolic.run(row);
   res.json({ ok: true, id: info.lastInsertRowid });
+});
+
+// Saldo de días de vacaciones y asuntos propios del empleado.
+solicitudesRouter.post('/saldo', (req, res) => {
+  const emp = autenticar(req, res);
+  if (!emp) return;
+  res.json(getSaldoAusencias(emp.id));
 });
 
 // Listar las solicitudes del propio empleado.
