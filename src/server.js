@@ -8,6 +8,7 @@ import './db.js'; // inicializa el esquema
 import { fichajeRouter } from './routes/fichaje.js';
 import { empleadoRouter } from './routes/empleado.js';
 import { adminRouter } from './routes/admin.js';
+import { solicitudesRouter } from './routes/solicitudes.js';
 import { deviceInfo, isAdmin } from './auth.js';
 
 const app = express();
@@ -43,6 +44,7 @@ app.get('/img/logo.png', (req, res) => {
 
 app.use('/api/fichaje', fichajeRouter);
 app.use('/api/mis-fichajes', empleadoRouter);
+app.use('/api/solicitudes', solicitudesRouter);
 app.use('/api/admin', adminRouter);
 
 // Estaticos (frontend + PWA).

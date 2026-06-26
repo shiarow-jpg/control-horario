@@ -32,7 +32,7 @@ function abrirPanel() {
   hide('#vistaSetup'); hide('#vistaLogin'); show('#vistaPanel');
   $('#infHasta').value = hoyLocalStr();
   $('#infDesde').value = inicioMesLocalStr();
-  cargarDispositivos(); cargarEmpleados(); cargarIntegridadSilenciosa();
+  cargarDispositivos(); cargarEmpleados(); cargarSolicitudes(); cargarIntegridadSilenciosa();
 }
 
 // ---- Setup / login ----
@@ -172,10 +172,27 @@ async function cargarInforme() {
   else {
     h += '<table><thead><tr><th>Día</th><th>Marcajes</th><th>Trabajado</th><th>Pausa</th></tr></thead><tbody>';
     for (const d of r.dias) {
-      const marc = d.marcajes.map(m => `${fmtHora(m.ts)} ${ETIQUETA[m.tipo]}${m.origen === 'offline_sync' ? ' <span class="pill tag-sync">sinc</span>' : ''}${m.origen === 'manual' ? ' <span class="pill tag-manual">manual</span>' : ''}`).join(' · ');
+      const marc = d.marcajes.map(m => {
+        const corr = (m.origen === 'manual' || m.origen === 'solicitud') ? ` <span class="pill tag-manual" title="${(m.motivo || '').replace(/"/g, '')}">corregido</span>` : '';
+        const sinc = m.origen === 'offline_sync' ? ' <span class="pill tag-sync">sinc</span>' : '';
+        return `${fmtHora(m.ts)} ${ETIQUETA[m.tipo]}${corr}${sinc}`;
+      }).join(' · ');
       h += `<tr><td>${fmtFecha(d.fecha)}</td><td>${marc}</td><td><b>${d.trabajado}</b></td><td class="muted">${d.pausa}</td></tr>`;
     }
     h += '</tbody></table>';
+  }
+  // Correcciones (qué se modificó y por qué).
+  if (r.correcciones?.length) {
+    h += '<h2 class="mt">Correcciones y modificaciones</h2><table><thead><tr><th>Acción</th><th>Marcaje</th><th>Motivo</th></tr></thead><tbody>';
+    for (const c of r.correcciones)
+      h += `<tr><td>${c.accion === 'anulado' ? '<span class="tag-anulado">Anulado</span>' : 'Añadido'}</td><td>${fmtFecha(c.ts.slice(0, 10))} ${fmtHora(c.ts)} · ${ETIQUETA[c.tipo] || c.tipo}</td><td class="muted">${c.motivo || ''}</td></tr>`;
+    h += '</tbody></table>';
+  }
+  // Ausencias aprobadas.
+  if (r.ausencias?.length) {
+    h += '<h2 class="mt">Ausencias aprobadas</h2><ul>';
+    for (const a of r.ausencias) h += `<li class="muted">${a.motivo || ''}</li>`;
+    h += '</ul>';
   }
   $('#infResultado').innerHTML = h;
   cargarEventos(empleado_id);
@@ -188,40 +205,52 @@ $('#btnPdf').onclick = () => {
   window.open(`/api/admin/informe/pdf?empleado_id=${empleado_id}&desde=${desde}&hasta=${hasta}`, '_blank');
 };
 
-// ---- Correcciones ----
-$('#btnManual').onclick = async () => {
-  const empleado_id = $('#infEmpleado').value;
-  const tipo = $('#manTipo').value;
-  const fecha = $('#manFecha').value;
-  const motivo = $('#manMotivo').value.trim();
-  if (!empleado_id) return toast('Selecciona empleado arriba', 'bad');
-  if (!fecha) return toast('Indica fecha y hora', 'bad');
-  if (!motivo) return toast('El motivo es obligatorio', 'bad');
+// ---- Solicitudes (el empleado pide, el admin aprueba/deniega) ----
+$('#solicFiltro').onchange = cargarSolicitudes;
+async function cargarSolicitudes() {
+  const estado = $('#solicFiltro').value;
+  const { solicitudes } = await api(`/api/admin/solicitudes?estado=${estado}`);
+  const pendientes = solicitudes.filter(s => s.estado === 'pendiente').length;
+  const badge = $('#solicBadge');
+  badge.classList.toggle('hidden', pendientes === 0);
+  badge.textContent = pendientes ? `${pendientes} pendiente${pendientes > 1 ? 's' : ''}` : '';
+  if (!solicitudes.length) { $('#listaSolic').innerHTML = '<p class="muted">No hay solicitudes.</p>'; return; }
+  let h = '<table><thead><tr><th>Empleado</th><th>Tipo</th><th>Detalle</th><th>Motivo</th><th>Estado</th><th></th></tr></thead><tbody>';
+  for (const s of solicitudes) {
+    const acc = s.estado === 'pendiente'
+      ? `<button class="btn btn-sm" style="background:#1f9d57;color:#fff" data-ap="${s.id}">Aprobar</button>
+         <button class="btn btn-sm" style="background:#c0392b;color:#fff" data-de="${s.id}">Denegar</button>`
+      : `<span class="muted">${s.nota_admin || ''}</span>`;
+    h += `<tr><td><b>${s.empleado}</b></td><td>${s.clase === 'correccion' ? 'Corrección' : 'Ausencia'}</td>
+      <td>${s.detalle}</td><td class="muted">${s.motivo || ''}</td>
+      <td><span class="estado-pill est-${s.estado}">${s.estado}</span></td><td>${acc}</td></tr>`;
+  }
+  $('#listaSolic').innerHTML = h + '</tbody></table>';
+  $('#listaSolic').querySelectorAll('[data-ap]').forEach(b => b.onclick = () => resolver(b.dataset.ap, 'aprobar'));
+  $('#listaSolic').querySelectorAll('[data-de]').forEach(b => b.onclick = () => resolver(b.dataset.de, 'denegar'));
+}
+async function resolver(id, decision) {
+  let nota = '';
+  if (decision === 'denegar') nota = prompt('Motivo de la denegación (opcional):') || '';
   try {
-    await api('/api/admin/marcaje-manual', { method: 'POST', body: { empleado_id, tipo, ts_efectivo: new Date(fecha).toISOString(), motivo } });
-    toast('Marcaje manual añadido ✓', 'ok'); $('#manMotivo').value = ''; cargarInforme();
-  } catch { toast('No se pudo añadir', 'bad'); }
-};
+    await api(`/api/admin/solicitudes/${id}/resolver`, { method: 'POST', body: { decision, nota } });
+    toast(decision === 'aprobar' ? 'Solicitud aprobada ✓' : 'Solicitud denegada', decision === 'aprobar' ? 'ok' : '');
+    cargarSolicitudes();
+  } catch (e) { toast(e.data?.error === 'ya_resuelta' ? 'Ya estaba resuelta' : 'No se pudo resolver', 'bad'); }
+}
 
+// ---- Auditoría (registro completo, solo lectura) ----
 async function cargarEventos(empleadoId) {
   const { eventos } = await api(`/api/admin/eventos/${empleadoId}`);
   const anulados = new Set(eventos.filter(e => e.tipo === 'anulacion' && e.ref_evento_id).map(e => e.ref_evento_id));
-  let h = '<h2 class="mt">Eventos en bruto (auditoría)</h2><table><thead><tr><th>Fecha/hora</th><th>Tipo</th><th>Origen</th><th>Autor</th><th>Motivo</th><th></th></tr></thead><tbody>';
+  let h = '<table><thead><tr><th>Fecha/hora</th><th>Tipo</th><th>Origen</th><th>Autor</th><th>Motivo</th></tr></thead><tbody>';
   for (const e of eventos) {
     const anulado = anulados.has(e.id);
     h += `<tr><td>${fmtFecha(e.ts_efectivo.slice(0, 10))} ${fmtHora(e.ts_efectivo)}</td>
       <td class="${anulado ? 'tag-anulado' : ''}">${e.etiqueta}${e.tipo === 'anulacion' && e.ref_evento_id ? ` (#${e.ref_evento_id})` : ''}</td>
-      <td>${e.origen}</td><td>${e.autor}</td><td class="muted">${e.motivo || ''}</td>
-      <td>${['entrada', 'salida', 'inicio_pausa', 'fin_pausa'].includes(e.tipo) && !anulado ? `<button class="btn btn-ghost btn-sm" data-anular="${e.id}">Anular</button>` : ''}</td></tr>`;
+      <td>${e.origen}</td><td>${e.autor}</td><td class="muted">${e.motivo || ''}</td></tr>`;
   }
-  h += '</tbody></table>';
-  $('#listaEventos').innerHTML = h;
-  $('#listaEventos').querySelectorAll('[data-anular]').forEach(b => b.onclick = async () => {
-    const motivo = prompt('Motivo de la anulación (obligatorio):');
-    if (!motivo) return;
-    await api('/api/admin/anular', { method: 'POST', body: { evento_id: Number(b.dataset.anular), motivo } });
-    toast('Marcaje anulado ✓', 'ok'); cargarInforme();
-  });
+  $('#listaEventos').innerHTML = h + '</tbody></table>';
 }
 
 // ---- Integridad / contraseña ----

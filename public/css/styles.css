@@ -57,6 +57,17 @@ nav.links a:hover { color: var(--txt); }
 .tabpane { display: none; }
 .tabpane.active { display: block; }
 
+/* Sub-pestañas (dentro de "Mi cuenta") */
+.subtabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.subtab { background: none; border: none; color: var(--txt-dim); padding: 9px 13px; cursor: pointer; font-weight: 700; font-size: 13px; border-bottom: 2px solid transparent; }
+.subtab.active { color: var(--txt); border-bottom-color: var(--accent); }
+.subtab:hover { color: var(--txt); }
+.ss-pane { padding-top: 14px; }
+.estado-pill { padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+.est-pendiente { background: rgba(241,196,15,.15); color: var(--warn); }
+.est-aprobada { background: rgba(46,204,113,.15); color: var(--ok); }
+.est-denegada { background: rgba(231,76,60,.15); color: #ff8a7a; }
+
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
 .pad { padding: 22px; }
 

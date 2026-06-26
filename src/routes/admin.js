@@ -6,7 +6,8 @@ import { db, appendEvento, getConfig, setConfig, verificarCadena } from '../db.j
 import { hashSecret, checkSecret, makeToken, randomId } from '../security.js';
 import { config } from '../config.js';
 import { requireAdmin, isAdmin, getClientIp } from '../auth.js';
-import { getEmpleados, getEmpleado, getEstado, calcularJornada, fmtDuracion, ETIQUETA_TIPO, hoyLocal, inicioMesLocal } from '../jornada.js';
+import { getEmpleados, getEmpleado, getEstado, calcularJornada, fmtDuracion, ETIQUETA_TIPO,
+  hoyLocal, inicioMesLocal, formatear, getCorrecciones, getAusencias } from '../jornada.js';
 import { generarInformePDF } from '../pdf.js';
 
 export const adminRouter = Router();
@@ -107,34 +108,48 @@ adminRouter.post('/empleados/:id/pin', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-// ---- Correcciones (siempre con motivo; nunca se edita/borra el original) ----
-// Anular un marcaje erroneo: crea un evento 'anulacion' que referencia al original.
-adminRouter.post('/anular', requireAdmin, (req, res) => {
-  const eventoId = Number(req.body?.evento_id);
-  const motivo = String(req.body?.motivo || '').trim();
-  if (!motivo) return res.status(400).json({ error: 'motivo_requerido' });
-  const ev = db.prepare("SELECT * FROM eventos WHERE id = ? AND tipo IN ('entrada','salida','inicio_pausa','fin_pausa')").get(eventoId);
-  if (!ev) return res.status(404).json({ error: 'evento_no_encontrado' });
-  appendEvento({
-    empleado_id: ev.empleado_id, tipo: 'anulacion', ref_evento_id: ev.id,
-    motivo, autor: 'admin', origen: 'manual', ip: getClientIp(req), dispositivo: 'admin',
-  });
-  res.json({ ok: true });
+// ---- Solicitudes: el empleado pide (correccion/ausencia), el admin resuelve ----
+// Las modificaciones NUNCA las inicia el admin; nacen de una solicitud del
+// empleado. Al aprobar, queda en la cadena inalterable quien pidio y quien aprobo.
+adminRouter.get('/solicitudes', requireAdmin, (req, res) => {
+  const estado = req.query.estado || 'pendiente';
+  const sql = `SELECT s.*, e.nombre AS empleado FROM solicitudes s JOIN empleados e ON e.id = s.empleado_id
+    ${estado === 'todas' ? '' : 'WHERE s.estado = ?'}
+    ORDER BY (s.estado = 'pendiente') DESC, s.creada_en DESC LIMIT 200`;
+  const rows = estado === 'todas' ? db.prepare(sql).all() : db.prepare(sql).all(estado);
+  res.json({ solicitudes: rows.map(s => ({ ...formatear(s), empleado: s.empleado })) });
 });
 
-// Anadir un marcaje manualmente (p.ej. olvido de fichaje). Requiere motivo.
-adminRouter.post('/marcaje-manual', requireAdmin, (req, res) => {
-  const { empleado_id, tipo, ts_efectivo, motivo } = req.body || {};
-  if (!['entrada', 'salida', 'inicio_pausa', 'fin_pausa'].includes(tipo)) return res.status(400).json({ error: 'tipo_invalido' });
-  if (!String(motivo || '').trim()) return res.status(400).json({ error: 'motivo_requerido' });
-  const emp = getEmpleado(Number(empleado_id));
-  if (!emp) return res.status(404).json({ error: 'empleado_no_encontrado' });
-  const t = new Date(ts_efectivo);
-  if (isNaN(t.getTime())) return res.status(400).json({ error: 'fecha_invalida' });
-  appendEvento({
-    empleado_id: emp.id, tipo, ts_efectivo: t.toISOString(),
-    motivo: String(motivo).trim(), autor: 'admin', origen: 'manual', ip: getClientIp(req), dispositivo: 'admin',
-  });
+adminRouter.post('/solicitudes/:id/resolver', requireAdmin, (req, res) => {
+  const s = db.prepare('SELECT * FROM solicitudes WHERE id = ?').get(Number(req.params.id));
+  if (!s) return res.status(404).json({ error: 'no_encontrada' });
+  if (s.estado !== 'pendiente') return res.status(409).json({ error: 'ya_resuelta' });
+  const decision = req.body?.decision;
+  const nota = String(req.body?.nota || '').trim() || null;
+  if (!['aprobar', 'denegar'].includes(decision)) return res.status(400).json({ error: 'decision_invalida' });
+
+  const emp = getEmpleado(s.empleado_id);
+  const firma = `solicitado por ${emp?.nombre || 'empleado'}, aprobado por administrador`;
+  let eventoSeq = null;
+
+  if (decision === 'aprobar') {
+    if (s.clase === 'correccion' && s.corr_accion === 'anadir') {
+      eventoSeq = appendEvento({ empleado_id: s.empleado_id, tipo: s.corr_tipo, ts_efectivo: s.corr_ts,
+        motivo: `${s.motivo} · ${firma}`, autor: 'empleado', origen: 'solicitud', ip: getClientIp(req), dispositivo: 'admin' }).seq;
+    } else if (s.clase === 'correccion' && s.corr_accion === 'anular') {
+      const orig = db.prepare('SELECT id FROM eventos WHERE id = ?').get(s.corr_ref_id);
+      if (!orig) return res.status(404).json({ error: 'marcaje_no_encontrado' });
+      eventoSeq = appendEvento({ empleado_id: s.empleado_id, tipo: 'anulacion', ref_evento_id: orig.id,
+        motivo: `${s.motivo} · ${firma}`, autor: 'empleado', origen: 'solicitud', ip: getClientIp(req), dispositivo: 'admin' }).seq;
+    } else if (s.clase === 'ausencia') {
+      const resumen = `${s.aus_tipo}${s.aus_subtipo ? '/' + s.aus_subtipo : ''} ${s.aus_desde}${s.aus_hasta !== s.aus_desde ? ' a ' + s.aus_hasta : ''}${s.aus_horas ? ' (' + s.aus_horas + ')' : ''}${s.motivo ? ' · ' + s.motivo : ''}`;
+      eventoSeq = appendEvento({ empleado_id: s.empleado_id, tipo: 'ausencia', ts_efectivo: s.aus_desde + 'T00:00:00.000Z',
+        motivo: `${resumen} · ${firma}`, autor: 'empleado', origen: 'solicitud', ip: getClientIp(req), dispositivo: 'admin' }).seq;
+    }
+  }
+
+  db.prepare('UPDATE solicitudes SET estado = ?, resuelta_en = ?, nota_admin = ?, evento_id = ? WHERE id = ?')
+    .run(decision === 'aprobar' ? 'aprobada' : 'denegada', new Date().toISOString(), nota, eventoSeq, s.id);
   res.json({ ok: true });
 });
 
@@ -158,8 +173,10 @@ adminRouter.get('/informe', requireAdmin, (req, res) => {
     totalPausa: fmtDuracion(j.totalPausaSeg), abierto: j.abierto,
     dias: j.dias.map(d => ({
       fecha: d.fecha, trabajado: fmtDuracion(d.trabajadoSeg), pausa: fmtDuracion(d.pausaSeg),
-      marcajes: d.marcajes.map(m => ({ tipo: m.tipo, ts: m.ts_efectivo, origen: m.origen, id: m.id })),
+      marcajes: d.marcajes.map(m => ({ tipo: m.tipo, ts: m.ts_efectivo, origen: m.origen, id: m.id, motivo: m.motivo })),
     })),
+    correcciones: getCorrecciones(emp.id, desde, hasta),
+    ausencias: getAusencias(emp.id, desde, hasta).map(a => ({ ts: a.ts_efectivo, motivo: a.motivo })),
   });
 });
 

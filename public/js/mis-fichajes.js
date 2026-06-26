@@ -1,72 +1,162 @@
-// Subvista "Mis fichajes": el empleado consulta/descarga SU registro con su PIN.
+// "Mi cuenta" del empleado: fichajes + solicitudes (corrección / ausencia).
 import { api, toast, fmtFecha, fmtHora, ETIQUETA, hoyLocalStr, inicioMesLocalStr } from './common.js';
 
 const $ = (s) => document.querySelector(s);
+const ETIQUETA_ESTADO_SOL = { pendiente: 'Pendiente', aprobada: 'Aprobada', denegada: 'Denegada' };
 
-function cuerpo() {
-  return {
-    empleado_id: Number($('#mfEmpleado').value),
-    pin: $('#mfPin').value,
-    desde: $('#mfDesde').value,
-    hasta: $('#mfHasta').value,
-  };
+function auth() { return { empleado_id: Number($('#mfEmpleado').value), pin: $('#mfPin').value }; }
+function pinOk() {
+  if (!/^\d{4}$/.test($('#mfPin').value)) { toast('Introduce tu PIN de 4 dígitos', 'bad'); return false; }
+  return true;
 }
 
-function pintar(r) {
+// ---- Mis fichajes (consulta + PDF) ----
+function pintarFichajes(r) {
   let html = `<div class="banner" style="background:rgba(90,140,255,.12);border-color:rgba(90,140,255,.4);color:#9cc0ff">
     <b>${r.empleado}</b> · Total trabajado: <b>${r.totalTrabajado}</b> · Pausas: ${r.totalPausa}
     ${r.abierto ? ' · <span style="color:#f1c40f">Jornada sin cerrar</span>' : ''}</div>`;
   if (!r.dias.length) { html += '<p class="muted">Sin fichajes en el periodo.</p>'; $('#mfResultado').innerHTML = html; return; }
-  html += '<table><thead><tr><th>Día</th><th>Marcajes</th><th>Trabajado</th><th>Pausa</th></tr></thead><tbody>';
+  html += '<table><thead><tr><th>Día</th><th>Marcajes</th><th>Trabajado</th></tr></thead><tbody>';
   for (const d of r.dias) {
-    const marc = d.marcajes.map(m => `${fmtHora(m.ts)} ${ETIQUETA[m.tipo]}${m.origen==='offline_sync'?' <span class="pill tag-sync">sinc</span>':''}${m.origen==='manual'?' <span class="pill tag-manual">manual</span>':''}`).join(' · ');
-    html += `<tr><td>${fmtFecha(d.fecha)}</td><td>${marc}</td><td><b>${d.trabajado}</b></td><td class="muted">${d.pausa}</td></tr>`;
+    const marc = d.marcajes.map(m => {
+      const corr = (m.origen === 'manual' || m.origen === 'solicitud') ? ` <span class="pill tag-manual" title="${m.motivo || ''}">corregido</span>` : '';
+      const sinc = m.origen === 'offline_sync' ? ' <span class="pill tag-sync">sinc</span>' : '';
+      return `${fmtHora(m.ts)} ${ETIQUETA[m.tipo]}${corr}${sinc}`;
+    }).join(' · ');
+    html += `<tr><td>${fmtFecha(d.fecha)}</td><td>${marc}</td><td><b>${d.trabajado}</b></td></tr>`;
   }
   html += '</tbody></table>';
   $('#mfResultado').innerHTML = html;
 }
 
+async function consultar() {
+  if (!pinOk()) return;
+  try {
+    const r = await api('/api/mis-fichajes/consulta', { method: 'POST', body: { ...auth(), desde: $('#mfDesde').value, hasta: $('#mfHasta').value } });
+    pintarFichajes(r);
+  } catch (e) { toast(e.data?.error === 'pin_incorrecto' ? 'PIN incorrecto' : 'No se pudo consultar', 'bad'); }
+}
+
+async function descargarPdf() {
+  if (!pinOk()) return;
+  try {
+    const res = await fetch('/api/mis-fichajes/pdf', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...auth(), desde: $('#mfDesde').value, hasta: $('#mfHasta').value }) });
+    if (!res.ok) { toast('PIN incorrecto o sin datos', 'bad'); return; }
+    const blob = await res.blob(); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `mis-fichajes-${$('#mfDesde').value}.pdf`; a.click();
+    URL.revokeObjectURL(url);
+  } catch { toast('No se pudo descargar', 'bad'); }
+}
+
+// ---- Pedir corrección ----
+async function cargarParaAnular() {
+  if (!pinOk()) return;
+  try {
+    const desde = inicioMesLocalStr(), hasta = hoyLocalStr();
+    const r = await api('/api/mis-fichajes/consulta', { method: 'POST', body: { ...auth(), desde, hasta } });
+    const ops = [];
+    for (const d of r.dias) for (const m of d.marcajes) ops.push(`<option value="${m.id}">${fmtFecha(d.fecha)} ${fmtHora(m.ts)} · ${ETIQUETA[m.tipo]}</option>`);
+    $('#corrRef').innerHTML = ops.length ? ops.join('') : '<option value="">(sin fichajes este mes)</option>';
+    toast('Fichajes cargados', 'ok');
+  } catch (e) { toast(e.data?.error === 'pin_incorrecto' ? 'PIN incorrecto' : 'No se pudo cargar', 'bad'); }
+}
+
+async function enviarCorreccion() {
+  if (!pinOk()) return;
+  const accion = $('#corrAccion').value;
+  const motivo = $('#corrMotivo').value.trim();
+  if (!motivo) return toast('Indica el motivo', 'bad');
+  const body = { ...auth(), accion, motivo };
+  if (accion === 'anadir') {
+    if (!$('#corrTs').value) return toast('Indica fecha y hora', 'bad');
+    body.tipo = $('#corrTipo').value;
+    body.ts = new Date($('#corrTs').value).toISOString();
+  } else {
+    if (!$('#corrRef').value) return toast('Elige el marcaje a anular (carga tus fichajes)', 'bad');
+    body.ref_id = Number($('#corrRef').value);
+  }
+  try {
+    await api('/api/solicitudes/correccion', { method: 'POST', body });
+    toast('Solicitud enviada ✓ El administrador la revisará', 'ok');
+    $('#corrMotivo').value = '';
+  } catch (e) { toast(e.data?.error === 'pin_incorrecto' ? 'PIN incorrecto' : 'No se pudo enviar', 'bad'); }
+}
+
+// ---- Pedir ausencia ----
+async function enviarAusencia() {
+  if (!pinOk()) return;
+  if (!$('#ausDesde').value) return toast('Indica la fecha de inicio', 'bad');
+  const body = {
+    ...auth(), aus_tipo: $('#ausTipo').value,
+    aus_subtipo: $('#ausTipo').value === 'permiso_retribuido' ? $('#ausSub').value : null,
+    aus_desde: $('#ausDesde').value, aus_hasta: $('#ausHasta').value || $('#ausDesde').value,
+    aus_horas: $('#ausHoras').value.trim(), motivo: $('#ausMotivo').value.trim(),
+  };
+  try {
+    await api('/api/solicitudes/ausencia', { method: 'POST', body });
+    toast('Solicitud de ausencia enviada ✓', 'ok');
+    $('#ausMotivo').value = '';
+  } catch (e) {
+    const err = e.data?.error;
+    toast(err === 'pin_incorrecto' ? 'PIN incorrecto' : err === 'motivo_requerido' ? 'El motivo es obligatorio en «Otro»' : 'No se pudo enviar', 'bad');
+  }
+}
+
+// ---- Mis solicitudes ----
+async function verMisSolicitudes() {
+  if (!pinOk()) return;
+  try {
+    const { solicitudes } = await api('/api/solicitudes/mias', { method: 'POST', body: auth() });
+    if (!solicitudes.length) { $('#ssLista').innerHTML = '<p class="muted">No tienes solicitudes.</p>'; return; }
+    let h = '<table><thead><tr><th>Tipo</th><th>Detalle</th><th>Motivo</th><th>Estado</th></tr></thead><tbody>';
+    for (const s of solicitudes) {
+      h += `<tr><td>${s.clase === 'correccion' ? 'Corrección' : 'Ausencia'}</td>
+        <td>${s.detalle}</td><td class="muted">${s.motivo || ''}</td>
+        <td><span class="estado-pill est-${s.estado}">${ETIQUETA_ESTADO_SOL[s.estado]}</span>${s.nota_admin ? `<br><span class="muted" style="font-size:11px">${s.nota_admin}</span>` : ''}</td></tr>`;
+    }
+    $('#ssLista').innerHTML = h + '</tbody></table>';
+  } catch (e) { toast(e.data?.error === 'pin_incorrecto' ? 'PIN incorrecto' : 'No se pudo cargar', 'bad'); }
+}
+
 let wired = false;
 export async function initMisFichajes() {
-  // Fechas por defecto: mes en curso (fecha local canaria).
-  $('#mfHasta').value = hoyLocalStr();
   $('#mfDesde').value = inicioMesLocalStr();
+  $('#mfHasta').value = hoyLocalStr();
   $('#mfResultado').innerHTML = '';
   $('#mfPin').value = '';
-
   try {
     const { empleados } = await api('/api/fichaje/empleados');
     $('#mfEmpleado').innerHTML = empleados.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
-  } catch {
-    toast('No se pudo cargar la lista', 'bad');
-  }
+  } catch { toast('No se pudo cargar la lista', 'bad'); }
 
   if (wired) return;
   wired = true;
 
-  $('#mfPin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#mfConsultar').click(); });
+  // sub-pestañas
+  document.querySelectorAll('#vistaMisFichajes .subtab').forEach(t => t.onclick = () => {
+    document.querySelectorAll('#vistaMisFichajes .subtab').forEach(x => x.classList.toggle('active', x === t));
+    for (const pane of ['fichajes', 'correccion', 'ausencia', 'solicitudes'])
+      $('#ss-' + pane).classList.toggle('hidden', pane !== t.dataset.ss);
+    if (t.dataset.ss === 'solicitudes') verMisSolicitudes();
+  });
 
-  $('#mfConsultar').onclick = async () => {
-    try {
-      const r = await api('/api/mis-fichajes/consulta', { method: 'POST', body: cuerpo() });
-      pintar(r);
-    } catch (e) {
-      toast(e.data?.error === 'pin_incorrecto' ? 'PIN incorrecto' : 'No se pudo consultar', 'bad');
-    }
-  };
+  $('#mfConsultar').onclick = consultar;
+  $('#mfPdf').onclick = descargarPdf;
+  $('#mfPin').addEventListener('keydown', e => { if (e.key === 'Enter') consultar(); });
 
-  $('#mfPdf').onclick = async () => {
-    const c = cuerpo();
-    try {
-      const res = await fetch('/api/mis-fichajes/pdf', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(c),
-      });
-      if (!res.ok) { toast('PIN incorrecto o sin datos', 'bad'); return; }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `mis-fichajes-${c.desde}.pdf`; a.click();
-      URL.revokeObjectURL(url);
-    } catch { toast('No se pudo descargar', 'bad'); }
+  // corrección: toggle añadir/anular
+  $('#corrAccion').onchange = () => {
+    const anular = $('#corrAccion').value === 'anular';
+    $('#corrAnadir').classList.toggle('hidden', anular);
+    $('#corrAnular').classList.toggle('hidden', !anular);
   };
+  $('#corrCargar').onclick = cargarParaAnular;
+  $('#corrEnviar').onclick = enviarCorreccion;
+
+  // ausencia: mostrar subtipo solo en permiso retribuido
+  $('#ausTipo').onchange = () => $('#ausSubWrap').classList.toggle('hidden', $('#ausTipo').value !== 'permiso_retribuido');
+  $('#ausEnviar').onclick = enviarAusencia;
+
+  $('#ssRefrescar').onclick = verMisSolicitudes;
 }

@@ -34,7 +34,7 @@ empleadoRouter.post('/consulta', (req, res) => {
       fecha: d.fecha,
       trabajado: fmtDuracion(d.trabajadoSeg),
       pausa: fmtDuracion(d.pausaSeg),
-      marcajes: d.marcajes.map(m => ({ tipo: m.tipo, ts: m.ts_efectivo, origen: m.origen })),
+      marcajes: d.marcajes.map(m => ({ id: m.id, tipo: m.tipo, ts: m.ts_efectivo, origen: m.origen, motivo: m.motivo })),
     })),
   });
 });

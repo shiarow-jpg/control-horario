@@ -20,6 +20,34 @@ export const ETIQUETA_TIPO = {
   inicio_pausa: 'Inicio almuerzo',
   fin_pausa: 'Fin almuerzo',
   anulacion: 'Anulación',
+  ausencia: 'Ausencia',
+};
+
+// Tipos de ausencia/permiso soportados (basados en la normativa española).
+export const TIPOS_AUSENCIA = ['vacaciones', 'permiso_retribuido', 'asuntos_propios', 'medico', 'baja', 'otro'];
+export const ETIQUETA_AUSENCIA = {
+  vacaciones: 'Vacaciones',
+  permiso_retribuido: 'Permiso retribuido',
+  asuntos_propios: 'Asuntos propios',
+  medico: 'Cita médica',
+  baja: 'Baja médica (IT)',
+  otro: 'Otro',
+};
+// Subtipos del permiso retribuido (art. 37.3 ET).
+export const SUBTIPOS_PERMISO = [
+  'matrimonio', 'fallecimiento_familiar', 'hospitalizacion_familiar',
+  'fuerza_mayor_familiar', 'mudanza', 'deber_publico', 'lactancia', 'nacimiento_cuidado', 'climatico',
+];
+export const ETIQUETA_SUBTIPO = {
+  matrimonio: 'Matrimonio / pareja de hecho',
+  fallecimiento_familiar: 'Fallecimiento de familiar',
+  hospitalizacion_familiar: 'Hospitalización / enfermedad grave de familiar',
+  fuerza_mayor_familiar: 'Fuerza mayor familiar',
+  mudanza: 'Traslado de domicilio',
+  deber_publico: 'Deber público / legal',
+  lactancia: 'Lactancia',
+  nacimiento_cuidado: 'Nacimiento y cuidado de menor',
+  climatico: 'Permiso climático',
 };
 
 // Estados posibles del empleado y que marcajes admite cada uno.
@@ -112,6 +140,53 @@ export function calcularJornada(empleadoId, desde, hasta) {
   // Marca si el empleado quedo "abierto" (sin salida) dentro del periodo.
   const abierto = estado !== 'fuera';
   return { dias: lista, totalTrabajadoSeg, totalPausaSeg, abierto };
+}
+
+// Correcciones que afectan al periodo (para mostrarlas en el informe con su
+// motivo): marcajes anadidos manualmente / por solicitud, y anulaciones.
+export function getCorrecciones(empleadoId, desde, hasta) {
+  const out = [];
+  // Marcajes anadidos (olvidos) por correccion/admin.
+  const anadidos = db.prepare(`
+    SELECT * FROM eventos
+    WHERE empleado_id = ? AND tipo IN ('entrada','salida','inicio_pausa','fin_pausa')
+      AND origen IN ('manual','solicitud') AND ts_efectivo >= ? AND ts_efectivo <= ?
+    ORDER BY ts_efectivo ASC`).all(empleadoId, desde, hasta);
+  for (const e of anadidos) out.push({ accion: 'anadido', tipo: e.tipo, ts: e.ts_efectivo, motivo: e.motivo, autor: e.autor });
+
+  // Anulaciones cuyo marcaje anulado cae en el periodo.
+  const anul = db.prepare(`SELECT a.*, m.tipo AS m_tipo, m.ts_efectivo AS m_ts
+    FROM eventos a JOIN eventos m ON m.id = a.ref_evento_id
+    WHERE a.empleado_id = ? AND a.tipo = 'anulacion' AND m.ts_efectivo >= ? AND m.ts_efectivo <= ?
+    ORDER BY m.ts_efectivo ASC`).all(empleadoId, desde, hasta);
+  for (const e of anul) out.push({ accion: 'anulado', tipo: e.m_tipo, ts: e.m_ts, motivo: e.motivo, autor: e.autor });
+
+  return out;
+}
+
+// Ausencias aprobadas (eventos tipo 'ausencia') en un periodo.
+export function getAusencias(empleadoId, desde, hasta) {
+  return db.prepare(`SELECT * FROM eventos WHERE empleado_id = ? AND tipo = 'ausencia'
+    AND ts_efectivo >= ? AND ts_efectivo <= ? ORDER BY ts_efectivo ASC`).all(empleadoId, desde, hasta);
+}
+
+// Formato comun de una solicitud para el frontend (empleado y admin).
+export function formatear(s) {
+  const r = {
+    id: s.id, clase: s.clase, estado: s.estado, motivo: s.motivo,
+    creada_en: s.creada_en, resuelta_en: s.resuelta_en, nota_admin: s.nota_admin,
+  };
+  if (s.clase === 'correccion') {
+    r.accion = s.corr_accion;
+    r.corr_tipo = s.corr_tipo; r.corr_ts = s.corr_ts; r.corr_ref_id = s.corr_ref_id;
+    r.detalle = s.corr_accion === 'anadir'
+      ? `Añadir ${ETIQUETA_TIPO[s.corr_tipo] || s.corr_tipo}`
+      : `Anular marcaje #${s.corr_ref_id}`;
+  } else {
+    r.aus_tipo = s.aus_tipo; r.aus_subtipo = s.aus_subtipo; r.aus_desde = s.aus_desde; r.aus_hasta = s.aus_hasta; r.aus_horas = s.aus_horas;
+    r.detalle = `${ETIQUETA_AUSENCIA[s.aus_tipo] || s.aus_tipo}${s.aus_subtipo ? ' · ' + (ETIQUETA_SUBTIPO[s.aus_subtipo] || s.aus_subtipo) : ''} · ${s.aus_desde}${s.aus_hasta && s.aus_hasta !== s.aus_desde ? ' a ' + s.aus_hasta : ''}${s.aus_horas ? ' (' + s.aus_horas + ')' : ''}`;
+  }
+  return r;
 }
 
 // Formatea segundos como "Hh Mm".

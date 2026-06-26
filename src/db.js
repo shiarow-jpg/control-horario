@@ -54,6 +54,35 @@ CREATE TABLE IF NOT EXISTS eventos (
 );
 
 CREATE INDEX IF NOT EXISTS idx_eventos_emp ON eventos(empleado_id, ts_efectivo);
+
+-- Solicitudes del empleado (correccion de fichaje / ausencia) y su aprobacion.
+-- El estado es mutable (workflow); la huella legal de lo APROBADO va a 'eventos'.
+CREATE TABLE IF NOT EXISTS solicitudes (
+  id            INTEGER PRIMARY KEY,
+  empleado_id   INTEGER NOT NULL REFERENCES empleados(id),
+  clase         TEXT NOT NULL,             -- correccion | ausencia
+  estado        TEXT NOT NULL DEFAULT 'pendiente', -- pendiente|aprobada|denegada
+  -- correccion de fichaje:
+  corr_accion   TEXT,                      -- anadir | anular
+  corr_tipo     TEXT,                      -- entrada|salida|inicio_pausa|fin_pausa (anadir)
+  corr_ts       TEXT,                      -- hora propuesta ISO (anadir)
+  corr_ref_id   INTEGER,                   -- evento a anular (anular)
+  -- ausencia:
+  aus_tipo      TEXT,                      -- vacaciones|permiso_retribuido|asuntos_propios|medico|baja|otro
+  aus_subtipo   TEXT,                      -- detalle del permiso retribuido
+  aus_desde     TEXT,                      -- fecha inicio (YYYY-MM-DD)
+  aus_hasta     TEXT,                      -- fecha fin (YYYY-MM-DD)
+  aus_horas     TEXT,                      -- opcional (ausencia parcial)
+  -- comun:
+  motivo        TEXT,
+  creada_en     TEXT NOT NULL,
+  resuelta_en   TEXT,
+  nota_admin    TEXT,
+  evento_id     INTEGER                    -- evento generado al aprobar (trazabilidad)
+);
+
+CREATE INDEX IF NOT EXISTS idx_solic_estado ON solicitudes(estado, creada_en);
+CREATE INDEX IF NOT EXISTS idx_solic_emp ON solicitudes(empleado_id, creada_en);
 `);
 
 // ----- Helpers de config -----

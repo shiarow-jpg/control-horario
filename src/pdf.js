@@ -4,7 +4,7 @@
 import PDFDocument from 'pdfkit';
 import { config } from './config.js';
 import { sha256 } from './security.js';
-import { calcularJornada, getMarcajes, fmtDuracion, ETIQUETA_TIPO } from './jornada.js';
+import { calcularJornada, getMarcajes, fmtDuracion, ETIQUETA_TIPO, getCorrecciones, getAusencias } from './jornada.js';
 import { verificarCadena } from './db.js';
 
 const fmtFecha = new Intl.DateTimeFormat('es-ES', {
@@ -104,11 +104,39 @@ export function generarInformePDF(stream, { empleado, desde, hasta }) {
     doc.fontSize(10).font('Helvetica-Bold')
       .text(`${fechaTxt}  —  Trabajado: ${fmtDuracion(d.trabajadoSeg)}  (pausa ${fmtDuracion(d.pausaSeg)})`);
     const linea = d.marcajes.map(m => {
-      const flag = m.origen === 'offline_sync' ? ' (sinc.)' : '';
+      const flag = m.origen === 'offline_sync' ? ' (sinc.)' : (m.origen === 'manual' || m.origen === 'solicitud') ? ' (corregido)' : '';
       return `${fmtHora.format(new Date(m.ts_efectivo))} ${ETIQUETA_TIPO[m.tipo]}${flag}`;
     }).join('   ·   ');
     doc.fontSize(9).font('Helvetica').fillColor('#333').text(`   ${linea}`).fillColor('#000');
     doc.moveDown(0.4);
+  }
+
+  // ---- Correcciones y modificaciones (transparencia / inalterabilidad) ----
+  const correcciones = getCorrecciones(empleado.id, desde, hasta);
+  if (correcciones.length) {
+    if (doc.y > 680) doc.addPage();
+    doc.moveDown(0.6).fontSize(11).font('Helvetica-Bold').fillColor('#000').text('Correcciones y modificaciones');
+    doc.fontSize(8).font('Helvetica').fillColor('#555').text('Toda modificación queda registrada con su motivo, quién la pidió y quién la aprobó.');
+    doc.moveDown(0.2).fontSize(9).fillColor('#000');
+    for (const c of correcciones) {
+      if (doc.y > 740) doc.addPage();
+      const cuando = `${fmtFecha.format(new Date(c.ts.slice(0, 10) + 'T12:00:00Z'))} ${fmtHora.format(new Date(c.ts))}`;
+      const acc = c.accion === 'anulado' ? 'Marcaje ANULADO' : 'Marcaje AÑADIDO';
+      doc.font('Helvetica-Bold').text(`   ${acc} · ${ETIQUETA_TIPO[c.tipo] || c.tipo} · ${cuando}`);
+      doc.font('Helvetica').fillColor('#333').text(`      Motivo: ${c.motivo || '—'}`).fillColor('#000');
+    }
+  }
+
+  // ---- Ausencias aprobadas ----
+  const ausencias = getAusencias(empleado.id, desde, hasta);
+  if (ausencias.length) {
+    if (doc.y > 700) doc.addPage();
+    doc.moveDown(0.6).fontSize(11).font('Helvetica-Bold').text('Ausencias aprobadas');
+    doc.moveDown(0.2).fontSize(9).font('Helvetica');
+    for (const a of ausencias) {
+      if (doc.y > 750) doc.addPage();
+      doc.fillColor('#333').text(`   • ${a.motivo || '—'}`).fillColor('#000');
+    }
   }
 
   // ---- Pie de verificacion ----

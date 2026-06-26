@@ -55,21 +55,100 @@
       <!-- Subvista: el empleado consulta SUS fichajes con su PIN -->
       <div id="vistaMisFichajes" class="card pad hidden">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <h1 style="margin:0">Mis fichajes</h1>
+          <h1 style="margin:0">Mi cuenta</h1>
           <button class="btn btn-ghost btn-sm" id="mfVolver">← Volver</button>
         </div>
-        <p class="sub">Consulta y descarga una copia de tu registro de jornada (es tu derecho).</p>
+        <p class="sub">Consulta tus fichajes y gestiona tus solicitudes. Identifícate con tu PIN.</p>
         <div class="row">
           <div><label>Empleado/a</label><select id="mfEmpleado"></select></div>
           <div><label>PIN</label><input id="mfPin" type="password" inputmode="numeric" maxlength="4" placeholder="4 dígitos" /></div>
-          <div><label>Desde</label><input id="mfDesde" type="date" /></div>
-          <div><label>Hasta</label><input id="mfHasta" type="date" /></div>
         </div>
-        <div class="row mt">
-          <button class="btn btn-primary btn-sm" id="mfConsultar">Consultar</button>
-          <button class="btn btn-ghost btn-sm" id="mfPdf">Descargar PDF</button>
+
+        <div class="subtabs mt">
+          <button class="subtab active" data-ss="fichajes">Mis fichajes</button>
+          <button class="subtab" data-ss="correccion">Pedir corrección</button>
+          <button class="subtab" data-ss="ausencia">Pedir ausencia</button>
+          <button class="subtab" data-ss="solicitudes">Mis solicitudes</button>
         </div>
-        <div id="mfResultado" class="mt"></div>
+
+        <!-- Mis fichajes -->
+        <div id="ss-fichajes" class="ss-pane">
+          <div class="row">
+            <div><label>Desde</label><input id="mfDesde" type="date" /></div>
+            <div><label>Hasta</label><input id="mfHasta" type="date" /></div>
+            <div style="flex:0"><button class="btn btn-primary btn-sm" id="mfConsultar" style="margin-top:24px">Consultar</button></div>
+            <div style="flex:0"><button class="btn btn-ghost btn-sm" id="mfPdf" style="margin-top:24px">PDF</button></div>
+          </div>
+          <div id="mfResultado" class="mt"></div>
+        </div>
+
+        <!-- Pedir corrección -->
+        <div id="ss-correccion" class="ss-pane hidden">
+          <p class="sub">Pide corregir un fichaje (un olvido o un marcaje erróneo). El administrador lo aprobará.</p>
+          <div class="row">
+            <div><label>Tipo de corrección</label>
+              <select id="corrAccion">
+                <option value="anadir">Añadir un fichaje que olvidé</option>
+                <option value="anular">Anular un fichaje erróneo</option>
+              </select></div>
+          </div>
+          <div id="corrAnadir" class="row">
+            <div><label>Qué fichaje</label>
+              <select id="corrTipo">
+                <option value="entrada">Entrada</option><option value="salida">Salida</option>
+                <option value="inicio_pausa">Inicio almuerzo</option><option value="fin_pausa">Fin almuerzo</option>
+              </select></div>
+            <div><label>Fecha y hora correctas</label><input id="corrTs" type="datetime-local" /></div>
+          </div>
+          <div id="corrAnular" class="hidden">
+            <label>Marcaje a anular</label>
+            <select id="corrRef"><option value="">— carga tus fichajes recientes —</option></select>
+            <button class="btn btn-ghost btn-sm mt" id="corrCargar">Cargar mis fichajes recientes</button>
+          </div>
+          <label>Motivo</label><input id="corrMotivo" placeholder="Ej: olvidé fichar la salida" />
+          <button class="btn btn-primary btn-sm mt" id="corrEnviar">Enviar solicitud</button>
+        </div>
+
+        <!-- Pedir ausencia -->
+        <div id="ss-ausencia" class="ss-pane hidden">
+          <p class="sub">Solicita vacaciones o una ausencia. El administrador la aprobará o denegará.</p>
+          <div class="row">
+            <div><label>Tipo</label>
+              <select id="ausTipo">
+                <option value="vacaciones">Vacaciones</option>
+                <option value="permiso_retribuido">Permiso retribuido</option>
+                <option value="asuntos_propios">Asuntos propios</option>
+                <option value="medico">Cita médica</option>
+                <option value="baja">Baja médica (IT)</option>
+                <option value="otro">Otro</option>
+              </select></div>
+            <div id="ausSubWrap" class="hidden"><label>Detalle del permiso</label>
+              <select id="ausSub">
+                <option value="matrimonio">Matrimonio / pareja de hecho</option>
+                <option value="fallecimiento_familiar">Fallecimiento de familiar</option>
+                <option value="hospitalizacion_familiar">Hospitalización / enfermedad grave de familiar</option>
+                <option value="fuerza_mayor_familiar">Fuerza mayor familiar</option>
+                <option value="mudanza">Traslado de domicilio</option>
+                <option value="deber_publico">Deber público / legal</option>
+                <option value="lactancia">Lactancia</option>
+                <option value="nacimiento_cuidado">Nacimiento y cuidado de menor</option>
+                <option value="climatico">Permiso climático</option>
+              </select></div>
+          </div>
+          <div class="row">
+            <div><label>Desde</label><input id="ausDesde" type="date" /></div>
+            <div><label>Hasta</label><input id="ausHasta" type="date" /></div>
+            <div><label>Horas (opcional)</label><input id="ausHoras" placeholder="ej: 9:00-13:00" /></div>
+          </div>
+          <label>Motivo / detalle</label><input id="ausMotivo" placeholder="Opcional (obligatorio si es «Otro»)" />
+          <button class="btn btn-primary btn-sm mt" id="ausEnviar">Enviar solicitud</button>
+        </div>
+
+        <!-- Mis solicitudes -->
+        <div id="ss-solicitudes" class="ss-pane hidden">
+          <button class="btn btn-ghost btn-sm" id="ssRefrescar">Ver mis solicitudes</button>
+          <div id="ssLista" class="mt"></div>
+        </div>
       </div>
     </section>
 
@@ -124,6 +203,18 @@
         </div>
 
         <div class="card pad mb">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h2 style="margin:0">Solicitudes <span id="solicBadge" class="estado-pill est-pendiente hidden"></span></h2>
+            <select id="solicFiltro" style="width:auto">
+              <option value="pendiente">Pendientes</option>
+              <option value="todas">Todas</option>
+            </select>
+          </div>
+          <p class="sub">Solicitudes de los empleados (correcciones de fichaje y ausencias). Apruébalas o deniégalas; todo queda registrado.</p>
+          <div id="listaSolic"></div>
+        </div>
+
+        <div class="card pad mb">
           <h2>Informes y registro</h2>
           <div class="row">
             <div><label>Empleado/a</label><select id="infEmpleado"></select></div>
@@ -134,16 +225,9 @@
           </div>
           <div id="infResultado" class="mt"></div>
           <details class="mt">
-            <summary class="muted" style="cursor:pointer">Auditoría y correcciones (anular / añadir marcaje)</summary>
+            <summary class="muted" style="cursor:pointer">Auditoría (registro completo de eventos)</summary>
             <div class="mt">
-              <p class="sub">Las correcciones nunca borran el original: queda registrado autor y motivo (exigido por la normativa).</p>
-              <div class="row mb">
-                <div><label>Añadir marcaje manual — tipo</label>
-                  <select id="manTipo"><option value="entrada">Entrada</option><option value="salida">Salida</option><option value="inicio_pausa">Inicio almuerzo</option><option value="fin_pausa">Fin almuerzo</option></select></div>
-                <div><label>Fecha y hora</label><input id="manFecha" type="datetime-local" /></div>
-                <div><label>Motivo</label><input id="manMotivo" placeholder="Ej: olvido de fichaje" /></div>
-                <div style="flex:0"><button class="btn btn-ghost btn-sm" id="btnManual" style="margin-top:24px">Añadir</button></div>
-              </div>
+              <p class="sub">Todo queda registrado: marcajes, correcciones (con motivo, quién la pidió y quién la aprobó) y ausencias. Nada se borra.</p>
               <div id="listaEventos"></div>
             </div>
           </details>
