@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Fichaje · Multiverso Norte</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0b1733" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="logo" id="brandLogo"><img src="/img/logo.png" alt="Multiverso Norte" onload="document.getElementById('brandLogo').classList.add('has-img')" onerror="this.remove();document.getElementById('brandLogo').textContent='MN'"></div>
+      <div>Multiverso Norte<small>CONTROL HORARIO</small></div>
+    </div>
+    <span class="clock" id="reloj"></span>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="fichaje">Fichaje</button>
+    <button class="tab" data-tab="admin">Administración</button>
+  </div>
+
+  <main class="wrap">
+    <!-- ================= PESTAÑA FICHAJE ================= -->
+    <section id="tab-fichaje" class="tabpane active">
+      <div id="sinAutorizar" class="card pad hidden center">
+        <h1>Equipo no autorizado</h1>
+        <p class="sub">Este ordenador todavía no puede fichar. Ve a la pestaña <b>Administración</b> y autoriza este equipo (una sola vez).</p>
+      </div>
+
+      <div id="vistaEmpleados" class="card pad hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <h1 style="margin:0">¿Quién ficha?</h1>
+          <button class="btn btn-ghost btn-sm" id="btnMisFichajes">Mis fichajes</button>
+        </div>
+        <p class="sub">Toca tu nombre para fichar entrada, salida o almuerzo.</p>
+        <div id="offlineBanner" class="banner hidden">Sin conexión: los fichajes se guardan y se enviarán al recuperar internet. <span id="colaCount"></span></div>
+        <div class="empleados" id="grid"></div>
+      </div>
+
+      <div id="vistaFichar" class="card pad hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h1 id="empNombre" style="margin:0"></h1>
+          <button class="btn btn-ghost btn-sm" id="volver">← Cambiar</button>
+        </div>
+        <p class="sub" id="empEstado"></p>
+        <div class="pindots" id="dots"></div>
+        <p class="center muted" style="margin-top:-8px">Introduce tu PIN de 4 dígitos</p>
+        <div class="pinpad" id="pinpad"></div>
+        <div class="acciones mt" id="acciones"></div>
+      </div>
+
+      <!-- Subvista: el empleado consulta SUS fichajes con su PIN -->
+      <div id="vistaMisFichajes" class="card pad hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h1 style="margin:0">Mis fichajes</h1>
+          <button class="btn btn-ghost btn-sm" id="mfVolver">← Volver</button>
+        </div>
+        <p class="sub">Consulta y descarga una copia de tu registro de jornada (es tu derecho).</p>
+        <div class="row">
+          <div><label>Empleado/a</label><select id="mfEmpleado"></select></div>
+          <div><label>PIN</label><input id="mfPin" type="password" inputmode="numeric" maxlength="4" placeholder="4 dígitos" /></div>
+          <div><label>Desde</label><input id="mfDesde" type="date" /></div>
+          <div><label>Hasta</label><input id="mfHasta" type="date" /></div>
+        </div>
+        <div class="row mt">
+          <button class="btn btn-primary btn-sm" id="mfConsultar">Consultar</button>
+          <button class="btn btn-ghost btn-sm" id="mfPdf">Descargar PDF</button>
+        </div>
+        <div id="mfResultado" class="mt"></div>
+      </div>
+    </section>
+
+    <!-- ================= PESTAÑA ADMINISTRACIÓN ================= -->
+    <section id="tab-admin" class="tabpane">
+      <div id="vistaSetup" class="card pad hidden" style="max-width:440px;margin:0 auto">
+        <h1>Configurar administrador</h1>
+        <p class="sub">Crea la contraseña de administrador. Será necesaria para gestionar empleados, autorizar equipos y exportar informes.</p>
+        <label>Contraseña (mín. 6 caracteres)</label>
+        <input id="setupPass" type="password" />
+        <label>Repetir contraseña</label>
+        <input id="setupPass2" type="password" />
+        <button class="btn btn-primary btn-sm mt" id="btnSetup">Crear administrador</button>
+      </div>
+
+      <div id="vistaLogin" class="card pad hidden" style="max-width:440px;margin:0 auto">
+        <h1>Administración</h1>
+        <p class="sub">Introduce la contraseña de administrador. Se pide cada vez que entras en esta pestaña.</p>
+        <label>Contraseña</label>
+        <input id="loginPass" type="password" />
+        <button class="btn btn-primary btn-sm mt" id="btnLogin">Entrar</button>
+      </div>
+
+      <div id="vistaPanel" class="hidden">
+        <div class="card pad mb">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h2 style="margin:0">Equipos autorizados</h2>
+            <button class="btn btn-ghost btn-sm" id="logout">Cerrar sesión</button>
+          </div>
+          <p class="sub">Solo los equipos autorizados pueden fichar. Autoriza este ordenador una vez; los móviles no podrán fichar.</p>
+          <div class="row">
+            <div><label>Nombre de este equipo</label><input id="dispNombre" placeholder="Ej: PC Mostrador 1" /></div>
+            <div style="flex:0"><button class="btn btn-primary btn-sm" id="btnAutorizar" style="margin-top:24px">Autorizar este equipo</button></div>
+          </div>
+          <div id="listaDisp" class="mt"></div>
+        </div>
+
+        <div class="card pad mb">
+          <h2>Empleados</h2>
+          <div class="row">
+            <div><label>Nombre</label><input id="admNombre" placeholder="Nombre y apellido" /></div>
+            <div><label>PIN (4 dígitos)</label><input id="empPin" inputmode="numeric" maxlength="4" placeholder="0000" /></div>
+            <div><label>Jornada</label><select id="empRegimen"><option value="completa">Completa</option><option value="parcial">Parcial</option></select></div>
+            <div style="flex:0"><button class="btn btn-primary btn-sm" id="btnAltaEmp" style="margin-top:24px">Alta</button></div>
+          </div>
+          <div id="listaEmp" class="mt"></div>
+          <details class="mt">
+            <summary class="muted" style="cursor:pointer">Empleados dados de baja (registro conservado)</summary>
+            <p class="sub mt">Ya no aparecen en la pantalla de fichaje, pero su registro se conserva y se puede consultar en "Informes y registro" por si lo solicitan tras dejar la empresa.</p>
+            <div id="listaBaja"></div>
+          </details>
+        </div>
+
+        <div class="card pad mb">
+          <h2>Informes y registro</h2>
+          <div class="row">
+            <div><label>Empleado/a</label><select id="infEmpleado"></select></div>
+            <div><label>Desde</label><input id="infDesde" type="date" /></div>
+            <div><label>Hasta</label><input id="infHasta" type="date" /></div>
+            <div style="flex:0"><button class="btn btn-primary btn-sm" id="btnInforme" style="margin-top:24px">Ver</button></div>
+            <div style="flex:0"><button class="btn btn-ghost btn-sm" id="btnPdf" style="margin-top:24px">PDF</button></div>
+          </div>
+          <div id="infResultado" class="mt"></div>
+          <details class="mt">
+            <summary class="muted" style="cursor:pointer">Auditoría y correcciones (anular / añadir marcaje)</summary>
+            <div class="mt">
+              <p class="sub">Las correcciones nunca borran el original: queda registrado autor y motivo (exigido por la normativa).</p>
+              <div class="row mb">
+                <div><label>Añadir marcaje manual — tipo</label>
+                  <select id="manTipo"><option value="entrada">Entrada</option><option value="salida">Salida</option><option value="inicio_pausa">Inicio almuerzo</option><option value="fin_pausa">Fin almuerzo</option></select></div>
+                <div><label>Fecha y hora</label><input id="manFecha" type="datetime-local" /></div>
+                <div><label>Motivo</label><input id="manMotivo" placeholder="Ej: olvido de fichaje" /></div>
+                <div style="flex:0"><button class="btn btn-ghost btn-sm" id="btnManual" style="margin-top:24px">Añadir</button></div>
+              </div>
+              <div id="listaEventos"></div>
+            </div>
+          </details>
+        </div>
+
+        <div class="card pad mb">
+          <h2>Integridad y seguridad</h2>
+          <button class="btn btn-ghost btn-sm" id="btnIntegridad">Verificar integridad del registro</button>
+          <span id="integridadRes" class="mt" style="margin-left:12px"></span>
+          <details class="mt">
+            <summary class="muted" style="cursor:pointer">Cambiar contraseña de administrador</summary>
+            <div class="row mt">
+              <div><label>Actual</label><input id="passActual" type="password" /></div>
+              <div><label>Nueva</label><input id="passNueva" type="password" /></div>
+              <div style="flex:0"><button class="btn btn-ghost btn-sm" id="btnPass" style="margin-top:24px">Cambiar</button></div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="legal">Registro de jornada conforme al art. 34.9 del Estatuto de los Trabajadores · Datos inalterables y conservados 4 años.</footer>
+
+  <script type="module" src="/js/app.js"></script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "Fichaje Multiverso Norte",
+  "short_name": "Fichaje MN",
+  "description": "Control horario y registro de jornada de Multiverso Norte",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1733",
+  "theme_color": "#0b1733",
+  "icons": [
+    { "src": "/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

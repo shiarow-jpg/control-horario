@@ -1,0 +1,22 @@
+{
+  "name": "fichaje-multiverso-norte",
+  "version": "1.0.0",
+  "description": "Aplicacion de fichaje (registro de jornada) para Multiverso Norte. Cumple Art. 34.9 ET: registro inalterable, conservacion 4 anos, export PDF.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/seed.js",
+    "reset": "node src/reset.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "express": "^4.19.2",
+    "pdfkit": "^0.15.0"
+  }
+}
