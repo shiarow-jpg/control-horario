@@ -1,7 +1,7 @@
 {
-  "name": "Fichaje Multiverso Norte",
-  "short_name": "Fichaje MN",
-  "description": "Control horario y registro de jornada de Multiverso Norte",
+  "name": "Fichaje · Control Horario",
+  "short_name": "Fichaje",
+  "description": "Control horario y registro de jornada laboral",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b1733",

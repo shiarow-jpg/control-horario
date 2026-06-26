@@ -3,8 +3,22 @@
 import './fichar.js';      // auto-inicia el kiosko (rejilla, reloj, cola offline)
 import { enterAdmin, leaveAdmin } from './admin.js';
 import { initMisFichajes } from './mis-fichajes.js';
+import { api } from './common.js';
 
 const $ = (s) => document.querySelector(s);
+
+// ---- Marca white-label: nombre y logo segun la empresa configurada ----
+(async () => {
+  try {
+    const ctx = await api('/api/contexto');
+    const nombre = ctx.empresa || 'Control Horario';
+    document.title = 'Fichaje · ' + nombre;
+    const bn = $('#brandName'); if (bn) bn.textContent = nombre;
+    const initials = nombre.split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
+    const bl = $('#brandLogo');
+    if (bl) { bl.dataset.initials = initials; if (!bl.querySelector('img')) bl.textContent = initials; }
+  } catch { /* sin conexion: se queda el valor por defecto del HTML */ }
+})();
 
 // ---- Pestañas ----
 // Al entrar en Administración se exige la contraseña SIEMPRE; al salir se cierra

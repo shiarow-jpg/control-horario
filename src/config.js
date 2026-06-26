@@ -24,11 +24,12 @@ function loadOrCreateSecret() {
 
 export const config = {
   port: Number(process.env.PORT) || 3000,
-  // Empresa que aparece en los informes PDF.
+  // Empresa que aparece en la cabecera y los informes PDF.
+  // Se configura por despliegue con variables de entorno (white-label).
   empresa: {
-    nombre: process.env.EMPRESA_NOMBRE || 'Multiverso Norte',
+    nombre: process.env.EMPRESA_NOMBRE || 'Control Horario',
     cif: process.env.EMPRESA_CIF || '',
-    direccion: process.env.EMPRESA_DIR || 'Tenerife',
+    direccion: process.env.EMPRESA_DIR || '',
   },
   secret: loadOrCreateSecret(),
   dbFile: join(DATA_DIR, 'fichaje.db'),

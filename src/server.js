@@ -1,8 +1,9 @@
 // Servidor principal de la app de fichaje.
 import express from 'express';
 import cookieParser from 'cookie-parser';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { config, ROOT } from './config.js';
+import { config, ROOT, DATA_DIR } from './config.js';
 import './db.js'; // inicializa el esquema
 import { fichajeRouter } from './routes/fichaje.js';
 import { empleadoRouter } from './routes/empleado.js';
@@ -28,6 +29,17 @@ app.get('/api/contexto', (req, res) => {
 });
 
 app.get('/api/salud', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+
+// Logo white-label: si la empresa puso su logo en la carpeta de datos
+// (data/logo.png|.svg|.jpg) se sirve ese; si no, el logo neutro por defecto.
+// Asi el mismo codigo vale para cualquier empresa sin tocar el repo.
+app.get('/img/logo.png', (req, res) => {
+  for (const f of ['logo.png', 'logo.svg', 'logo.jpg', 'logo.jpeg', 'logo.webp']) {
+    const custom = join(DATA_DIR, f);
+    if (existsSync(custom)) return res.sendFile(custom);
+  }
+  res.sendFile(join(ROOT, 'public', 'img', 'logo-default.svg'));
+});
 
 app.use('/api/fichaje', fichajeRouter);
 app.use('/api/mis-fichajes', empleadoRouter);

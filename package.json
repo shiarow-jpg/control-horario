@@ -1,14 +1,15 @@
 {
-  "name": "fichaje-multiverso-norte",
+  "name": "control-horario",
   "version": "1.0.0",
-  "description": "Aplicacion de fichaje (registro de jornada) para Multiverso Norte. Cumple Art. 34.9 ET: registro inalterable, conservacion 4 anos, export PDF.",
+  "description": "Aplicacion de fichaje / registro de jornada laboral (white-label, multi-empresa). Cumple Art. 34.9 ET: registro inalterable, conservacion 4 anos, export PDF.",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node src/seed.js",
-    "reset": "node src/reset.js"
+    "reset": "node src/reset.js",
+    "demo": "node src/seed.js && node --env-file-if-exists=.env.demo src/server.js"
   },
   "engines": {
     "node": ">=22.5.0"

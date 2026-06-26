@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Fichaje · Multiverso Norte</title>
+  <title>Fichaje · Control Horario</title>
   <link rel="stylesheet" href="/css/styles.css" />
   <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#0b1733" />
@@ -11,8 +11,8 @@
 <body>
   <header class="top">
     <div class="brand">
-      <div class="logo" id="brandLogo"><img src="/img/logo.png" alt="Multiverso Norte" onload="document.getElementById('brandLogo').classList.add('has-img')" onerror="this.remove();document.getElementById('brandLogo').textContent='MN'"></div>
-      <div>Multiverso Norte<small>CONTROL HORARIO</small></div>
+      <div class="logo" id="brandLogo"><img src="/img/logo.png" alt="" onload="document.getElementById('brandLogo').classList.add('has-img')" onerror="var b=this.parentElement; this.remove(); if(b) b.textContent=b.dataset.initials||''"></div>
+      <div><span id="brandName">Control horario</span><small>CONTROL HORARIO</small></div>
     </div>
     <span class="clock" id="reloj"></span>
   </header>

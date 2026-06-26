@@ -1,6 +1,14 @@
-# Fichaje · Multiverso Norte
+# Control Horario · Fichaje (white-label)
 
-Aplicación web de **control horario / registro de jornada** para Multiverso Norte (tienda friki, norte de Tenerife). Pensada para fichar desde los **2 PCs del mostrador**, con estado compartido (entras en uno, sales en otro) y registro **inalterable** conforme a la normativa española.
+Aplicación web de **control horario / registro de jornada** **multi-empresa**: el mismo código sirve para cualquier negocio cambiando solo su configuración (nombre y logo). Pensada para fichar desde uno o varios PCs con estado compartido (entras en uno, sales en otro) y registro **inalterable** conforme a la normativa española.
+
+## Configurar por empresa (white-label)
+
+- **Nombre:** variable de entorno `EMPRESA_NOMBRE` (también `EMPRESA_CIF`, `EMPRESA_DIR`). Aparece en la cabecera y en los informes PDF.
+- **Logo:** coloca el archivo en `data/logo.png` (o `.svg`/`.jpg`). Si no hay, se usa un logo neutro por defecto. No toca el código.
+- **Zona horaria:** `TZ` (p. ej. `Atlantic/Canary`, `Europe/Madrid`).
+
+Así un mismo despliegue (o varios) atiende a distintas empresas sin modificar el repositorio.
 
 ---
 
@@ -36,9 +44,9 @@ La app es **una sola página con dos pestañas**: **Fichaje** (lo que usan los e
 3. En **Empleados**, da de alta a cada persona con su **PIN de 4 dígitos**.
 4. En la pestaña **Fichaje**, los empleados tocan su nombre → PIN → Entrada / Salida / Inicio o Fin de almuerzo. El botón **Mis fichajes** (con PIN) permite a cada uno ver/descargar su copia.
 
-### Logo de la tienda
+### Logo de la empresa
 
-Coloca el logo en `public/img/logo.png` (o `.svg`) y aparecerá automáticamente en la cabecera. Si no hay archivo, se muestra el recuadro "MN" como respaldo.
+Coloca el logo en `data/logo.png` (o `.svg`/`.jpg`) y aparecerá automáticamente en la cabecera. Si no hay archivo, se usa un logo neutro por defecto. (El nombre que acompaña al logo sale de `EMPRESA_NOMBRE`.)
 
 > Para probar rápido con datos de ejemplo: `npm run seed` (admin: `admin123`; PINs 1234/2345/3456). **No usar en producción.**
 
@@ -111,7 +119,7 @@ public/            Frontend de página única con 2 pestañas + PWA
   js/fichar.js     Kiosko (rejilla, PIN, cola offline)
   js/mis-fichajes.js  Consulta/descarga del propio registro
   js/admin.js      Panel de administración
-  img/logo.png     Logo de la tienda (opcional; respaldo "MN")
+  img/logo-default.svg  Logo neutro por defecto (cada empresa pone el suyo en data/logo.png)
 data/              Base de datos y secreto (NO versionar)
 ```
 
