@@ -61,7 +61,7 @@ export function generarInformePDF(stream, { empleado, desde, hasta }) {
 
   doc.fontSize(11).font('Helvetica-Bold').text(`Empleado/a: ${empleado.nombre}`);
   doc.fontSize(9).font('Helvetica')
-    .text(`Periodo: ${desde} a ${hasta}`)
+    .text(`Periodo: ${desde.slice(0, 10)} a ${hasta.slice(0, 10)}`)
     .text(`Generado: ${fmtFechaHora.format(new Date())} (${config.timezone})`);
   doc.moveDown(0.8);
 

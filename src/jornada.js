@@ -36,7 +36,7 @@ export const ETIQUETA_AUSENCIA = {
 // Subtipos del permiso retribuido (art. 37.3 ET).
 export const SUBTIPOS_PERMISO = [
   'matrimonio', 'fallecimiento_familiar', 'hospitalizacion_familiar',
-  'fuerza_mayor_familiar', 'mudanza', 'deber_publico', 'lactancia', 'nacimiento_cuidado', 'climatico',
+  'fuerza_mayor_familiar', 'mudanza', 'deber_publico', 'lactancia', 'nacimiento_cuidado', 'climatico', 'otro',
 ];
 export const ETIQUETA_SUBTIPO = {
   matrimonio: 'Matrimonio / pareja de hecho',
@@ -48,6 +48,7 @@ export const ETIQUETA_SUBTIPO = {
   lactancia: 'Lactancia',
   nacimiento_cuidado: 'Nacimiento y cuidado de menor',
   climatico: 'Permiso climático',
+  otro: 'Otro',
 };
 
 // Estados posibles del empleado y que marcajes admite cada uno.
