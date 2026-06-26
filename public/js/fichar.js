@@ -81,7 +81,31 @@ function seleccionar(e) {
             : e.estado === 'en_pausa' ? 'En pausa de almuerzo'
             : 'Actualmente fuera';
   $('#empEstado').textContent = txt;
-  pintarPin(); pintarPad(); pintarAcciones();
+  // Sin PIN configurado -> mostrar la creacion de PIN (primera vez).
+  const primera = !e.pin_configurado;
+  $('#crearPin').classList.toggle('hidden', !primera);
+  $('#pinNormal').classList.toggle('hidden', primera);
+  if (primera) {
+    $('#empEstado').textContent = 'Primera vez: crea tu PIN para empezar a fichar.';
+    $('#cpPin').value = ''; $('#cpPin2').value = '';
+  } else {
+    pintarPin(); pintarPad(); pintarAcciones();
+  }
+}
+
+async function crearPin() {
+  if (!seleccionado) return;
+  const p = $('#cpPin').value, p2 = $('#cpPin2').value;
+  if (!/^\d{4}$/.test(p)) return toast('El PIN debe tener 4 dígitos', 'bad');
+  if (p !== p2) return toast('Los PIN no coinciden', 'bad');
+  try {
+    await api('/api/fichaje/configurar-pin', { method: 'POST', body: { empleado_id: seleccionado.id, pin: p, pin2: p2 } });
+    toast('PIN creado ✓ Ya puedes fichar', 'ok');
+    seleccionado.pin_configurado = true;
+    seleccionar(seleccionado); // recargar en modo normal
+  } catch (e) {
+    toast(e.data?.error === 'pin_ya_configurado' ? 'Este empleado ya tiene PIN' : 'No se pudo crear el PIN', 'bad');
+  }
 }
 
 function pintarPin() {
@@ -152,6 +176,8 @@ function volver() {
   pintarGrid();
 }
 $('#volver').onclick = volver;
+$('#cpGuardar').onclick = crearPin;
+$('#cpPin2').addEventListener('keydown', e => { if (e.key === 'Enter') crearPin(); });
 
 // Vacia la cola offline contra el servidor (origen offline_sync).
 async function flushCola() {
@@ -182,6 +208,8 @@ window.addEventListener('offline', pintarOffline);
 // posible, para no fichar algo por error cuando hay varias opciones).
 document.addEventListener('keydown', (e) => {
   if (!seleccionado || $('#vistaFichar').classList.contains('hidden')) return;
+  if (!$('#crearPin').classList.contains('hidden')) return; // en modo "crear PIN" no
+  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
   if (e.key.length === 1 && e.key >= '0' && e.key <= '9') {
     if (pin.length < 4) pin += e.key;
     pintarPin(); pintarAcciones(); e.preventDefault();

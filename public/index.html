@@ -46,10 +46,24 @@
           <button class="btn btn-ghost btn-sm" id="volver">← Cambiar</button>
         </div>
         <p class="sub" id="empEstado"></p>
-        <div class="pindots" id="dots"></div>
-        <p class="center muted" style="margin-top:-8px">Introduce tu PIN de 4 dígitos</p>
-        <div class="pinpad" id="pinpad"></div>
-        <div class="acciones mt" id="acciones"></div>
+
+        <!-- Entrada de PIN normal -->
+        <div id="pinNormal">
+          <div class="pindots" id="dots"></div>
+          <p class="center muted" style="margin-top:-8px">Introduce tu PIN de 4 dígitos</p>
+          <div class="pinpad" id="pinpad"></div>
+          <div class="acciones mt" id="acciones"></div>
+        </div>
+
+        <!-- Primera vez: el empleado crea su PIN (el admin no lo conoce) -->
+        <div id="crearPin" class="hidden">
+          <div class="banner">Es tu primera vez. Crea tu PIN de 4 dígitos: será personal y secreto (ni el administrador lo sabrá).</div>
+          <div class="row">
+            <div><label>Nuevo PIN</label><input id="cpPin" type="password" inputmode="numeric" maxlength="4" placeholder="4 dígitos" /></div>
+            <div><label>Repite el PIN</label><input id="cpPin2" type="password" inputmode="numeric" maxlength="4" placeholder="repite" /></div>
+          </div>
+          <button class="btn btn-primary btn-sm mt" id="cpGuardar">Crear mi PIN</button>
+        </div>
       </div>
 
       <!-- Subvista: el empleado consulta SUS fichajes con su PIN -->
@@ -69,6 +83,7 @@
           <button class="subtab" data-ss="correccion">Pedir corrección</button>
           <button class="subtab" data-ss="ausencia">Pedir ausencia</button>
           <button class="subtab" data-ss="solicitudes">Mis solicitudes</button>
+          <button class="subtab" data-ss="pin">Cambiar PIN</button>
         </div>
 
         <!-- Mis fichajes -->
@@ -149,6 +164,17 @@
           <button class="btn btn-ghost btn-sm" id="ssRefrescar">Ver mis solicitudes</button>
           <div id="ssLista" class="mt"></div>
         </div>
+
+        <!-- Cambiar PIN -->
+        <div id="ss-pin" class="ss-pane hidden">
+          <p class="sub">Cambia tu PIN. Necesitas tu PIN actual. (El de arriba no hace falta aquí.)</p>
+          <div class="row">
+            <div><label>PIN actual</label><input id="cpaActual" type="password" inputmode="numeric" maxlength="4" placeholder="actual" /></div>
+            <div><label>Nuevo PIN</label><input id="cpaNuevo" type="password" inputmode="numeric" maxlength="4" placeholder="nuevo" /></div>
+            <div><label>Repite el nuevo</label><input id="cpaNuevo2" type="password" inputmode="numeric" maxlength="4" placeholder="repite" /></div>
+          </div>
+          <button class="btn btn-primary btn-sm mt" id="cpaGuardar">Cambiar PIN</button>
+        </div>
       </div>
     </section>
 
@@ -188,9 +214,9 @@
 
         <div class="card pad mb">
           <h2>Empleados</h2>
+          <p class="sub">Das de alta solo el nombre. Cada empleado <b>crea su propio PIN</b> la primera vez que ficha; tú nunca lo conoces.</p>
           <div class="row">
             <div><label>Nombre</label><input id="admNombre" placeholder="Nombre y apellido" /></div>
-            <div><label>PIN (4 dígitos)</label><input id="empPin" inputmode="numeric" maxlength="4" placeholder="0000" /></div>
             <div><label>Jornada</label><select id="empRegimen"><option value="completa">Completa</option><option value="parcial">Parcial</option></select></div>
             <div style="flex:0"><button class="btn btn-primary btn-sm" id="btnAltaEmp" style="margin-top:24px">Alta</button></div>
           </div>

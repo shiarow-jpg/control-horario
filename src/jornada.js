@@ -59,8 +59,9 @@ export const TRANSICIONES = {
 };
 
 export function getEmpleados({ soloActivos = false } = {}) {
-  const sql = `SELECT id, nombre, regimen, activo, creado_en FROM empleados
-               ${soloActivos ? 'WHERE activo = 1' : ''} ORDER BY nombre COLLATE NOCASE`;
+  const sql = `SELECT id, nombre, regimen, activo, creado_en,
+               CASE WHEN pin_hash IS NOT NULL AND pin_hash != '' THEN 1 ELSE 0 END AS pin_configurado
+               FROM empleados ${soloActivos ? 'WHERE activo = 1' : ''} ORDER BY nombre COLLATE NOCASE`;
   return db.prepare(sql).all();
 }
 

@@ -80,12 +80,11 @@ adminRouter.get('/empleados', requireAdmin, (req, res) => {
 
 adminRouter.post('/empleados', requireAdmin, (req, res) => {
   const nombre = String(req.body?.nombre || '').trim();
-  const pin = String(req.body?.pin || '');
   const regimen = String(req.body?.regimen || 'completa');
   if (!nombre) return res.status(400).json({ error: 'nombre_requerido' });
-  if (!/^\d{4}$/.test(pin)) return res.status(400).json({ error: 'pin_formato' });
+  // Sin PIN: lo crea el propio empleado la primera vez que ficha (el admin no lo conoce).
   const info = db.prepare(`INSERT INTO empleados (nombre, pin_hash, regimen, activo, creado_en)
-              VALUES (?, ?, ?, 1, ?)`).run(nombre, hashSecret(pin), regimen, new Date().toISOString());
+              VALUES (?, '', ?, 1, ?)`).run(nombre, regimen, new Date().toISOString());
   res.json({ ok: true, id: info.lastInsertRowid });
 });
 
@@ -100,10 +99,10 @@ adminRouter.post('/empleados/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-adminRouter.post('/empleados/:id/pin', requireAdmin, (req, res) => {
-  const pin = String(req.body?.pin || '');
-  if (!/^\d{4}$/.test(pin)) return res.status(400).json({ error: 'pin_formato' });
-  const info = db.prepare('UPDATE empleados SET pin_hash = ? WHERE id = ?').run(hashSecret(pin), Number(req.params.id));
+// Restablecer PIN: el admin NO elige el valor, solo lo borra. El empleado
+// tendra que crear uno nuevo la proxima vez que fiche (el admin nunca lo conoce).
+adminRouter.post('/empleados/:id/reset-pin', requireAdmin, (req, res) => {
+  const info = db.prepare("UPDATE empleados SET pin_hash = '' WHERE id = ?").run(Number(req.params.id));
   if (info.changes === 0) return res.status(404).json({ error: 'no_encontrado' });
   res.json({ ok: true });
 });

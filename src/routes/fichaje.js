@@ -1,7 +1,7 @@
 // Rutas de fichaje (pantalla principal de kiosko). Protegidas por dispositivo.
 import { Router } from 'express';
 import { db, appendEvento } from '../db.js';
-import { checkSecret } from '../security.js';
+import { checkSecret, hashSecret } from '../security.js';
 import { requireDevice, getClientIp } from '../auth.js';
 import { getEmpleados, getEstado, marcajesPermitidos, TIPOS_MARCAJE, ETIQUETA_TIPO } from '../jornada.js';
 
@@ -12,9 +12,34 @@ fichajeRouter.use(requireDevice);
 fichajeRouter.get('/empleados', (req, res) => {
   const empleados = getEmpleados({ soloActivos: true }).map(e => {
     const { estado, desde } = getEstado(e.id);
-    return { id: e.id, nombre: e.nombre, estado, desde };
+    return { id: e.id, nombre: e.nombre, estado, desde, pin_configurado: !!e.pin_configurado };
   });
   res.json({ empleados, dispositivo: req.dispositivo.nombre });
+});
+
+// Crear el PIN por primera vez (lo hace el propio empleado; el admin no lo conoce).
+// Solo se permite si el empleado aun no tiene PIN configurado.
+fichajeRouter.post('/configurar-pin', (req, res) => {
+  const emp = db.prepare('SELECT * FROM empleados WHERE id = ? AND activo = 1').get(Number(req.body?.empleado_id));
+  if (!emp) return res.status(404).json({ error: 'empleado_no_encontrado' });
+  if (emp.pin_hash) return res.status(409).json({ error: 'pin_ya_configurado' });
+  const { pin, pin2 } = req.body || {};
+  if (!/^\d{4}$/.test(String(pin || ''))) return res.status(400).json({ error: 'pin_formato' });
+  if (pin !== pin2) return res.status(400).json({ error: 'pin_no_coincide' });
+  db.prepare('UPDATE empleados SET pin_hash = ? WHERE id = ?').run(hashSecret(pin), emp.id);
+  res.json({ ok: true });
+});
+
+// Cambiar el PIN (requiere el PIN actual). Lo hace el propio empleado.
+fichajeRouter.post('/cambiar-pin', (req, res) => {
+  const emp = db.prepare('SELECT * FROM empleados WHERE id = ? AND activo = 1').get(Number(req.body?.empleado_id));
+  if (!emp) return res.status(404).json({ error: 'empleado_no_encontrado' });
+  if (!checkSecret(req.body?.pin_actual, emp.pin_hash)) return res.status(401).json({ error: 'pin_incorrecto' });
+  const { nuevo, nuevo2 } = req.body || {};
+  if (!/^\d{4}$/.test(String(nuevo || ''))) return res.status(400).json({ error: 'pin_formato' });
+  if (nuevo !== nuevo2) return res.status(400).json({ error: 'pin_no_coincide' });
+  db.prepare('UPDATE empleados SET pin_hash = ? WHERE id = ?').run(hashSecret(nuevo), emp.id);
+  res.json({ ok: true });
 });
 
 // Estado de un empleado concreto (incluye marcajes permitidos).
@@ -51,6 +76,7 @@ fichajeRouter.post('/fichar', (req, res) => {
     origen = 'offline_sync';
     // No se valida la transicion: es un marcaje historico real ya ocurrido.
   } else {
+    if (!emp.pin_hash) return res.status(409).json({ error: 'pin_no_configurado' });
     const { pin } = req.body || {};
     if (!/^\d{4}$/.test(String(pin || ''))) return res.status(400).json({ error: 'pin_formato' });
     if (!checkSecret(pin, emp.pin_hash)) return res.status(401).json({ error: 'pin_incorrecto' });

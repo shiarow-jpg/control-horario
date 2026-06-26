@@ -94,13 +94,11 @@ async function cargarDispositivos() {
 // ---- Empleados ----
 $('#btnAltaEmp').onclick = async () => {
   const nombre = $('#admNombre').value.trim();
-  const pin = $('#empPin').value;
   const regimen = $('#empRegimen').value;
   if (!nombre) return toast('Falta el nombre', 'bad');
-  if (!/^\d{4}$/.test(pin)) return toast('El PIN debe tener 4 dígitos', 'bad');
   try {
-    await api('/api/admin/empleados', { method: 'POST', body: { nombre, pin, regimen } });
-    toast('Empleado dado de alta ✓', 'ok'); $('#admNombre').value = ''; $('#empPin').value = '';
+    await api('/api/admin/empleados', { method: 'POST', body: { nombre, regimen } });
+    toast('Empleado dado de alta ✓ Creará su PIN al fichar', 'ok'); $('#admNombre').value = '';
     cargarEmpleados();
   } catch { toast('No se pudo dar de alta', 'bad'); }
 };
@@ -119,11 +117,12 @@ async function cargarEmpleados() {
   if (!activos.length) {
     $('#listaEmp').innerHTML = '<p class="muted">Sin empleados activos. Añade el primero arriba.</p>';
   } else {
-    let h = '<table><thead><tr><th>Nombre</th><th>Jornada</th><th>Estado actual</th><th>Acciones</th></tr></thead><tbody>';
+    let h = '<table><thead><tr><th>Nombre</th><th>Jornada</th><th>Estado</th><th>PIN</th><th>Acciones</th></tr></thead><tbody>';
     for (const e of activos) {
-      h += `<tr><td><b>${e.nombre}</b></td><td class="muted">${e.regimen}</td><td>${e.estado}</td>
+      const pinEstado = e.pin_configurado ? 'Configurado' : '<span class="estado-pill est-pendiente">Sin configurar</span>';
+      h += `<tr><td><b>${e.nombre}</b></td><td class="muted">${e.regimen}</td><td>${e.estado}</td><td>${pinEstado}</td>
         <td>
-          <button class="btn btn-ghost btn-sm" data-pin="${e.id}">Reset PIN</button>
+          <button class="btn btn-ghost btn-sm" data-resetpin="${e.id}">Restablecer PIN</button>
           <button class="btn btn-ghost btn-sm" data-act="${e.id}" data-val="0">Dar de baja</button>
         </td></tr>`;
     }
@@ -143,12 +142,10 @@ async function cargarEmpleados() {
   }
 
   // Manejadores (sobre ambas listas).
-  document.querySelectorAll('#listaEmp [data-pin]').forEach(b => b.onclick = async () => {
-    const pin = prompt('Nuevo PIN de 4 dígitos:');
-    if (pin == null) return;
-    if (!/^\d{4}$/.test(pin)) return toast('PIN inválido', 'bad');
-    await api(`/api/admin/empleados/${b.dataset.pin}/pin`, { method: 'POST', body: { pin } });
-    toast('PIN actualizado ✓', 'ok');
+  document.querySelectorAll('#listaEmp [data-resetpin]').forEach(b => b.onclick = async () => {
+    if (!confirm('¿Restablecer el PIN de este empleado? Tendrá que crear uno nuevo la próxima vez que fiche. Tú no verás el PIN.')) return;
+    await api(`/api/admin/empleados/${b.dataset.resetpin}/reset-pin`, { method: 'POST' });
+    toast('PIN restablecido ✓ El empleado creará uno nuevo', 'ok'); cargarEmpleados();
   });
   document.querySelectorAll('#listaEmp [data-act], #listaBaja [data-act]').forEach(b => b.onclick = async () => {
     const alta = b.dataset.val === '1';

@@ -136,7 +136,7 @@ export async function initMisFichajes() {
   // sub-pestañas
   document.querySelectorAll('#vistaMisFichajes .subtab').forEach(t => t.onclick = () => {
     document.querySelectorAll('#vistaMisFichajes .subtab').forEach(x => x.classList.toggle('active', x === t));
-    for (const pane of ['fichajes', 'correccion', 'ausencia', 'solicitudes'])
+    for (const pane of ['fichajes', 'correccion', 'ausencia', 'solicitudes', 'pin'])
       $('#ss-' + pane).classList.toggle('hidden', pane !== t.dataset.ss);
     if (t.dataset.ss === 'solicitudes') verMisSolicitudes();
   });
@@ -159,4 +159,17 @@ export async function initMisFichajes() {
   $('#ausEnviar').onclick = enviarAusencia;
 
   $('#ssRefrescar').onclick = verMisSolicitudes;
+
+  // cambiar PIN
+  $('#cpaGuardar').onclick = async () => {
+    const empleado_id = Number($('#mfEmpleado').value);
+    const pin_actual = $('#cpaActual').value, nuevo = $('#cpaNuevo').value, nuevo2 = $('#cpaNuevo2').value;
+    if (!/^\d{4}$/.test(nuevo)) return toast('El nuevo PIN debe tener 4 dígitos', 'bad');
+    if (nuevo !== nuevo2) return toast('El nuevo PIN no coincide', 'bad');
+    try {
+      await api('/api/fichaje/cambiar-pin', { method: 'POST', body: { empleado_id, pin_actual, nuevo, nuevo2 } });
+      toast('PIN cambiado ✓', 'ok');
+      $('#cpaActual').value = ''; $('#cpaNuevo').value = ''; $('#cpaNuevo2').value = '';
+    } catch (e) { toast(e.data?.error === 'pin_incorrecto' ? 'PIN actual incorrecto' : 'No se pudo cambiar', 'bad'); }
+  };
 }
