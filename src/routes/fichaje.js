@@ -44,10 +44,10 @@ fichajeRouter.post('/cambiar-pin', (req, res) => {
 
 // Estado de un empleado concreto (incluye marcajes permitidos).
 fichajeRouter.get('/estado/:id', (req, res) => {
-  const emp = db.prepare('SELECT id, nombre FROM empleados WHERE id = ? AND activo = 1').get(Number(req.params.id));
+  const emp = db.prepare('SELECT id, nombre, pin_hash FROM empleados WHERE id = ? AND activo = 1').get(Number(req.params.id));
   if (!emp) return res.status(404).json({ error: 'empleado_no_encontrado' });
   const { estado, desde } = getEstado(emp.id);
-  res.json({ id: emp.id, nombre: emp.nombre, estado, desde, permitidos: marcajesPermitidos(estado) });
+  res.json({ id: emp.id, nombre: emp.nombre, estado, desde, permitidos: marcajesPermitidos(estado), pin_configurado: !!emp.pin_hash });
 });
 
 // Registrar un marcaje.

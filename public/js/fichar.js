@@ -72,23 +72,29 @@ function pintarGrid() {
   }
 }
 
-function seleccionar(e) {
+async function seleccionar(e) {
+  // Consulta el estado FRESCO del empleado (por si el admin restablecio el PIN
+  // o cambio el estado desde el otro PC). Asi el kiosko no usa datos en cache.
+  try {
+    const f = await api('/api/fichaje/estado/' + e.id);
+    e = { ...e, estado: f.estado, desde: f.desde, pin_configurado: f.pin_configurado };
+  } catch { /* sin conexion: usamos lo que tenemos */ }
   seleccionado = e; pin = '';
   $('#vistaEmpleados').classList.add('hidden');
   $('#vistaFichar').classList.remove('hidden');
   $('#empNombre').textContent = e.nombre;
-  const txt = e.estado === 'trabajando' && e.desde ? `Trabajando desde las ${new Intl.DateTimeFormat('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Atlantic/Canary',hour12:false}).format(new Date(e.desde))}`
-            : e.estado === 'en_pausa' ? 'En pausa de almuerzo'
-            : 'Actualmente fuera';
-  $('#empEstado').textContent = txt;
-  // Sin PIN configurado -> mostrar la creacion de PIN (primera vez).
+
+  // Sin PIN configurado -> mostrar la creacion de PIN (primera vez o tras reset).
   const primera = !e.pin_configurado;
   $('#crearPin').classList.toggle('hidden', !primera);
   $('#pinNormal').classList.toggle('hidden', primera);
   if (primera) {
-    $('#empEstado').textContent = 'Primera vez: crea tu PIN para empezar a fichar.';
+    $('#empEstado').textContent = 'Crea tu PIN de 4 dígitos para empezar a fichar.';
     $('#cpPin').value = ''; $('#cpPin2').value = '';
   } else {
+    $('#empEstado').textContent = e.estado === 'trabajando' && e.desde
+      ? `Trabajando desde las ${new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Atlantic/Canary', hour12: false }).format(new Date(e.desde))}`
+      : e.estado === 'en_pausa' ? 'En pausa de almuerzo' : 'Actualmente fuera';
     pintarPin(); pintarPad(); pintarAcciones();
   }
 }
@@ -151,6 +157,10 @@ async function fichar(tipo) {
     await refrescarYVolver();
   } catch (e) {
     if (e.status === 401 && e.data?.error === 'pin_incorrecto') { toast('PIN incorrecto', 'bad'); pin = ''; pintarPin(); pintarAcciones(); return; }
+    if (e.status === 409 && e.data?.error === 'pin_no_configurado') {
+      toast('Tu PIN fue restablecido. Crea uno nuevo.', '');
+      seleccionado.pin_configurado = false; seleccionar(seleccionado); return;
+    }
     if (e.status === 409) { toast('Esa acción no es válida ahora mismo', 'bad'); await refrescarYVolver(); return; }
     if (e.status === 400 || e.status === 404) { toast('No se pudo fichar', 'bad'); return; }
     // Error de red -> a la cola offline (la hora real es ahora).
