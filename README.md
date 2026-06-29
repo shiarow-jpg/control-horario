@@ -84,6 +84,17 @@ npm run reset
 
 Esto borra empleados, fichajes, equipos autorizados y la configuración del admin. En el siguiente arranque la app pedirá **configurar el administrador** y **no habrá ningún empleado**: la empresa añade los suyos. (Se conserva `data/secret.key`.)
 
+#### Poner los fichajes a 0 conservando empleados y dispositivos
+
+Si ya has dado de alta a los empleados y autorizado los PCs (p. ej. tras una **prueba/demo**) y solo quieres **borrar los datos de uso** para empezar de 0, usa la limpieza quirúrgica. Con el servidor **parado**:
+
+```bash
+npm run reset-fichajes        # simulacro: muestra qué se borraría
+npm run reset-fichajes -- --si  # borra de verdad
+```
+
+Borra **solo** los fichajes (`eventos`) y las solicitudes (correcciones/ausencias). **Conserva** empleados, dispositivos autorizados y la configuración del admin. La cadena de hashes se reinicia sola en el próximo fichaje. Haz copia de `data/fichaje.db` antes de ejecutarlo.
+
 ### Baja de empleados
 
 Dar de baja a un empleado lo **retira de la pantalla de fichaje y de la lista de empleados activos**, pero su registro **se conserva** y sigue siendo consultable en *Informes y registro* (el selector incluye a los dados de baja). Útil si un extrabajador solicita sus fichajes tras dejar la empresa. Se puede *Reactivar* en cualquier momento.
