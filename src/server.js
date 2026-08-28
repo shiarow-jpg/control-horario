@@ -14,8 +14,20 @@ import { deviceInfo, isAdmin } from './auth.js';
 const app = express();
 // Detras de Nginx: confiar en el primer proxy para leer X-Forwarded-For / HTTPS.
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
 app.use(express.json({ limit: '256kb' }));
 app.use(cookieParser());
+
+// Cabeceras de seguridad basicas. Sin CSP estricta: la UI usa handlers inline.
+app.use((req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'same-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  });
+  next();
+});
 
 // Endpoint de contexto para el frontend: sabe si el dispositivo esta autorizado
 // y si hay sesion admin, para decidir que pantalla mostrar.

@@ -3,9 +3,9 @@
 // correcciones (con motivo) e informes.
 import { Router } from 'express';
 import { db, appendEvento, getConfig, setConfig, verificarCadena } from '../db.js';
-import { hashSecret, checkSecret, makeToken, randomId } from '../security.js';
+import { hashSecret, makeToken, randomId } from '../security.js';
 import { config } from '../config.js';
-import { requireAdmin, isAdmin, getClientIp } from '../auth.js';
+import { requireAdmin, isAdmin, getClientIp, checkSecretLimitado } from '../auth.js';
 import { getEmpleados, getEmpleado, getEstado, calcularJornada, fmtDuracion, ETIQUETA_TIPO,
   hoyLocal, inicioMesLocal, formatear, getCorrecciones, getAusencias } from '../jornada.js';
 import { generarInformePDF } from '../pdf.js';
@@ -33,7 +33,7 @@ adminRouter.post('/setup', (req, res) => {
 adminRouter.post('/login', (req, res) => {
   const hash = getConfig('admin_hash');
   if (!hash) return res.status(409).json({ error: 'no_configurado' });
-  if (!checkSecret(req.body?.password, hash)) return res.status(401).json({ error: 'password_incorrecta' });
+  if (!checkSecretLimitado(req, res, { ambito: 'admin', id: 'login', plain: req.body?.password, hash, codigoError: 'password_incorrecta' })) return;
   const token = makeToken({ kind: 'admin', exp: Date.now() + config.adminCookieMaxAge });
   res.cookie('adm', token, cookieOpts(req, { maxAge: config.adminCookieMaxAge }));
   res.json({ ok: true });
@@ -46,7 +46,7 @@ adminRouter.post('/logout', (req, res) => {
 
 adminRouter.post('/cambiar-password', requireAdmin, (req, res) => {
   const { actual, nueva } = req.body || {};
-  if (!checkSecret(actual, getConfig('admin_hash'))) return res.status(401).json({ error: 'password_incorrecta' });
+  if (!checkSecretLimitado(req, res, { ambito: 'admin', id: 'login', plain: actual, hash: getConfig('admin_hash'), codigoError: 'password_incorrecta' })) return;
   if (!nueva || String(nueva).length < 6) return res.status(400).json({ error: 'password_corta' });
   setConfig('admin_hash', hashSecret(nueva));
   res.json({ ok: true });

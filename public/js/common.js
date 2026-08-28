@@ -15,6 +15,22 @@ export async function api(path, { method = 'GET', body } = {}) {
   return data;
 }
 
+// Traduce los codigos de error del servidor a mensajes para el usuario.
+const ERRORES = {
+  pin_incorrecto: 'PIN incorrecto',
+  password_incorrecta: 'Contraseña incorrecta',
+  motivo_requerido: 'El motivo es obligatorio',
+  ya_resuelta: 'Ya estaba resuelta',
+};
+export function mensajeError(e, porDefecto = 'No se pudo completar') {
+  const code = e?.data?.error;
+  if (code === 'demasiados_intentos') {
+    const min = Math.max(1, Math.ceil((e.data?.espera || 300) / 60));
+    return `Demasiados intentos fallidos. Vuelve a intentarlo en ${min} min`;
+  }
+  return ERRORES[code] || porDefecto;
+}
+
 let toastTimer;
 export function toast(msg, tipo = '') {
   let el = document.querySelector('.toast');

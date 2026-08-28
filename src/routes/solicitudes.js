@@ -2,8 +2,7 @@
 // y consultar las suyas. Protegidas por dispositivo autorizado + PIN propio.
 import { Router } from 'express';
 import { db } from '../db.js';
-import { checkSecret } from '../security.js';
-import { requireDevice } from '../auth.js';
+import { requireDevice, checkSecretLimitado } from '../auth.js';
 import { TIPOS_MARCAJE, TIPOS_AUSENCIA, SUBTIPOS_PERMISO, formatear, getSaldoAusencias } from '../jornada.js';
 
 export const solicitudesRouter = Router();
@@ -12,7 +11,7 @@ solicitudesRouter.use(requireDevice);
 function autenticar(req, res) {
   const emp = db.prepare('SELECT * FROM empleados WHERE id = ? AND activo = 1').get(Number(req.body?.empleado_id));
   if (!emp) { res.status(404).json({ error: 'empleado_no_encontrado' }); return null; }
-  if (!checkSecret(req.body?.pin, emp.pin_hash)) { res.status(401).json({ error: 'pin_incorrecto' }); return null; }
+  if (!checkSecretLimitado(req, res, { ambito: 'pin', id: emp.id, plain: req.body?.pin, hash: emp.pin_hash, codigoError: 'pin_incorrecto' })) return null;
   return emp;
 }
 
@@ -42,7 +41,7 @@ solicitudesRouter.post('/correccion', (req, res) => {
     if (!TIPOS_MARCAJE.includes(req.body?.tipo)) return res.status(400).json({ error: 'tipo_invalido' });
     const t = new Date(req.body?.ts);
     if (isNaN(t.getTime())) return res.status(400).json({ error: 'fecha_invalida' });
-    row.corr_tipo = req.body.tipo;
+    row.corr_tipo = req.body?.tipo;
     row.corr_ts = t.toISOString();
   } else if (accion === 'anular') {
     const ev = db.prepare(`SELECT id FROM eventos WHERE id = ? AND empleado_id = ?

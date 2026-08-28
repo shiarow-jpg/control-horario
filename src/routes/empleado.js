@@ -2,8 +2,7 @@
 // el trabajador debe poder consultar y obtener copia). Requiere PIN propio.
 import { Router } from 'express';
 import { db } from '../db.js';
-import { checkSecret } from '../security.js';
-import { requireDevice } from '../auth.js';
+import { requireDevice, checkSecretLimitado } from '../auth.js';
 import { calcularJornada, fmtDuracion, getEmpleado, hoyLocal, inicioMesLocal } from '../jornada.js';
 import { generarInformePDF } from '../pdf.js';
 
@@ -14,7 +13,7 @@ function autenticar(req, res) {
   const { empleado_id, pin } = req.body || {};
   const emp = db.prepare('SELECT * FROM empleados WHERE id = ?').get(Number(empleado_id));
   if (!emp) { res.status(404).json({ error: 'empleado_no_encontrado' }); return null; }
-  if (!checkSecret(pin, emp.pin_hash)) { res.status(401).json({ error: 'pin_incorrecto' }); return null; }
+  if (!checkSecretLimitado(req, res, { ambito: 'pin', id: emp.id, plain: pin, hash: emp.pin_hash, codigoError: 'pin_incorrecto' })) return null;
   return emp;
 }
 

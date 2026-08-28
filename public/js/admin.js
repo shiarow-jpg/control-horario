@@ -2,7 +2,7 @@
 // La contraseña se exige CADA VEZ que se entra en la pestaña: enterAdmin()
 // cierra cualquier sesión previa y muestra el login; leaveAdmin() cierra sesión
 // al salir. Así, cambiar a Fichaje y volver obliga a introducir la contraseña.
-import { api, toast, fmtFecha, fmtHora, ETIQUETA, hoyLocalStr, inicioMesLocalStr } from './common.js';
+import { api, toast, mensajeError, fmtFecha, fmtHora, ETIQUETA, hoyLocalStr, inicioMesLocalStr } from './common.js';
 
 const $ = (s) => document.querySelector(s);
 const show = (s) => $(s).classList.remove('hidden');
@@ -51,7 +51,7 @@ $('#btnLogin').onclick = async () => {
   try {
     await api('/api/admin/login', { method: 'POST', body: { password: $('#loginPass').value } });
     abrirPanel();
-  } catch { toast('Contraseña incorrecta', 'bad'); }
+  } catch (e) { toast(mensajeError(e, 'Contraseña incorrecta'), 'bad'); }
 };
 
 $('#logout').onclick = async () => {
@@ -276,5 +276,5 @@ $('#btnPass').onclick = async () => {
   try {
     await api('/api/admin/cambiar-password', { method: 'POST', body: { actual, nueva } });
     toast('Contraseña cambiada ✓', 'ok'); $('#passActual').value = ''; $('#passNueva').value = '';
-  } catch { toast('Contraseña actual incorrecta', 'bad'); }
+  } catch (e) { toast(mensajeError(e, 'Contraseña actual incorrecta'), 'bad'); }
 };

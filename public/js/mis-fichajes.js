@@ -1,5 +1,5 @@
 // "Mi cuenta" del empleado: fichajes + solicitudes (corrección / ausencia).
-import { api, toast, fmtFecha, fmtHora, ETIQUETA, hoyLocalStr, inicioMesLocalStr } from './common.js';
+import { api, toast, mensajeError, fmtFecha, fmtHora, ETIQUETA, hoyLocalStr, inicioMesLocalStr } from './common.js';
 
 const $ = (s) => document.querySelector(s);
 const ETIQUETA_ESTADO_SOL = { pendiente: 'Pendiente', aprobada: 'Aprobada', denegada: 'Denegada' };
@@ -34,7 +34,7 @@ async function consultar() {
   try {
     const r = await api('/api/mis-fichajes/consulta', { method: 'POST', body: { ...auth(), desde: $('#mfDesde').value, hasta: $('#mfHasta').value } });
     pintarFichajes(r);
-  } catch (e) { toast(e.data?.error === 'pin_incorrecto' ? 'PIN incorrecto' : 'No se pudo consultar', 'bad'); }
+  } catch (e) { toast(mensajeError(e, 'No se pudo consultar'), 'bad'); }
 }
 
 async function descargarPdf() {
@@ -59,7 +59,7 @@ async function cargarParaAnular() {
     for (const d of r.dias) for (const m of d.marcajes) ops.push(`<option value="${m.id}">${fmtFecha(d.fecha)} ${fmtHora(m.ts)} · ${ETIQUETA[m.tipo]}</option>`);
     $('#corrRef').innerHTML = ops.length ? ops.join('') : '<option value="">(sin fichajes este mes)</option>';
     toast('Fichajes cargados', 'ok');
-  } catch (e) { toast(e.data?.error === 'pin_incorrecto' ? 'PIN incorrecto' : 'No se pudo cargar', 'bad'); }
+  } catch (e) { toast(mensajeError(e, 'No se pudo cargar'), 'bad'); }
 }
 
 async function enviarCorreccion() {
@@ -80,7 +80,7 @@ async function enviarCorreccion() {
     await api('/api/solicitudes/correccion', { method: 'POST', body });
     toast('Solicitud enviada ✓ El administrador la revisará', 'ok');
     $('#corrMotivo').value = '';
-  } catch (e) { toast(e.data?.error === 'pin_incorrecto' ? 'PIN incorrecto' : 'No se pudo enviar', 'bad'); }
+  } catch (e) { toast(mensajeError(e, 'No se pudo enviar'), 'bad'); }
 }
 
 // ---- Pedir ausencia ----
@@ -99,7 +99,7 @@ async function enviarAusencia() {
     $('#ausMotivo').value = '';
   } catch (e) {
     const err = e.data?.error;
-    toast(err === 'pin_incorrecto' ? 'PIN incorrecto' : err === 'motivo_requerido' ? 'El motivo es obligatorio en «Otro»' : 'No se pudo enviar', 'bad');
+    toast(err === 'motivo_requerido' ? 'El motivo es obligatorio en «Otro»' : mensajeError(e, 'No se pudo enviar'), 'bad');
   }
 }
 
@@ -116,7 +116,7 @@ async function verMisSolicitudes() {
         <td><span class="estado-pill est-${s.estado}">${ETIQUETA_ESTADO_SOL[s.estado]}</span>${s.nota_admin ? `<br><span class="muted" style="font-size:11px">${s.nota_admin}</span>` : ''}</td></tr>`;
     }
     $('#ssLista').innerHTML = h + '</tbody></table>';
-  } catch (e) { toast(e.data?.error === 'pin_incorrecto' ? 'PIN incorrecto' : 'No se pudo cargar', 'bad'); }
+  } catch (e) { toast(mensajeError(e, 'No se pudo cargar'), 'bad'); }
 }
 
 // ---- Saldo de vacaciones / asuntos propios ----
@@ -171,7 +171,7 @@ export async function initMisFichajes() {
     } catch (e) {
       const err = e.data?.error;
       toast(err === 'pin_no_configurado' ? 'Aún no tienes PIN. Créalo en la pantalla de fichar.'
-        : err === 'pin_incorrecto' ? 'PIN incorrecto' : 'No se pudo entrar', 'bad');
+        : mensajeError(e, 'No se pudo entrar'), 'bad');
     }
   };
   $('#mfEntrar').onclick = entrar;
@@ -218,6 +218,6 @@ export async function initMisFichajes() {
       await api('/api/fichaje/cambiar-pin', { method: 'POST', body: { empleado_id, pin_actual, nuevo, nuevo2 } });
       toast('PIN cambiado ✓', 'ok');
       $('#cpaActual').value = ''; $('#cpaNuevo').value = ''; $('#cpaNuevo2').value = '';
-    } catch (e) { toast(e.data?.error === 'pin_incorrecto' ? 'PIN actual incorrecto' : 'No se pudo cambiar', 'bad'); }
+    } catch (e) { toast(e.data?.error === 'pin_incorrecto' ? 'PIN actual incorrecto' : mensajeError(e, 'No se pudo cambiar'), 'bad'); }
   };
 }

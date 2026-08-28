@@ -56,6 +56,38 @@ export function checkSecret(plain, hash) {
   }
 }
 
+// ----- Anti fuerza bruta -----
+// Cuenta intentos fallidos por clave (p. ej. "pin:IP:empleado"). Tras MAX_FALLOS
+// seguidos se bloquea la clave durante BLOQUEO_MS. En memoria: la app corre en
+// un unico proceso y un reinicio (que vacia el contador) es un evento raro.
+const MAX_FALLOS = 5;
+const BLOQUEO_MS = 5 * 60 * 1000;
+const VENTANA_MS = 15 * 60 * 1000; // los fallos antiguos caducan
+const fallos = new Map(); // clave -> { n, primero, hasta }
+
+export function bloqueoActivo(clave) {
+  const r = fallos.get(clave);
+  if (!r) return 0;
+  if (r.hasta && Date.now() < r.hasta) return Math.ceil((r.hasta - Date.now()) / 1000);
+  if (Date.now() - r.primero > VENTANA_MS) fallos.delete(clave);
+  return 0;
+}
+
+export function registrarFallo(clave) {
+  const ahora = Date.now();
+  const r = fallos.get(clave);
+  if (!r || ahora - r.primero > VENTANA_MS) {
+    fallos.set(clave, { n: 1, primero: ahora, hasta: 0 });
+    return;
+  }
+  r.n += 1;
+  if (r.n >= MAX_FALLOS) { r.hasta = ahora + BLOQUEO_MS; r.n = 0; r.primero = ahora; }
+}
+
+export function limpiarFallos(clave) {
+  fallos.delete(clave);
+}
+
 // ----- Cadena de hashes (inalterabilidad de los fichajes) -----
 // Cada evento encadena con el hash del anterior. Cambiar/borrar un evento
 // rompe la cadena => detectable. Esto materializa la "garantia de

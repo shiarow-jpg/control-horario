@@ -1,13 +1,33 @@
 // Middlewares de autenticacion: dispositivo autorizado y administrador.
 import { config } from './config.js';
 import { db } from './db.js';
-import { verifyToken } from './security.js';
+import { verifyToken, checkSecret, bloqueoActivo, registrarFallo, limpiarFallos } from './security.js';
 
 export function getClientIp(req) {
   // Detras de Nginx llega X-Forwarded-For; tomamos la primera IP real.
   const xff = req.headers['x-forwarded-for'];
   if (xff) return String(xff).split(',')[0].trim();
   return (req.socket?.remoteAddress || '').replace(/^::ffff:/, '');
+}
+
+// Verifica un secreto (PIN o contraseña) con proteccion anti fuerza bruta.
+// La clave de bloqueo combina ambito + IP + id, de modo que el mismo contador
+// cubre todas las rutas que validan ese secreto. Si falla, responde por `res`
+// y devuelve false; si acierta, limpia el contador y devuelve true.
+export function checkSecretLimitado(req, res, { ambito, id, plain, hash, codigoError }) {
+  const clave = `${ambito}:${getClientIp(req)}:${id}`;
+  const espera = bloqueoActivo(clave);
+  if (espera) {
+    res.status(429).json({ error: 'demasiados_intentos', espera });
+    return false;
+  }
+  if (!checkSecret(plain, hash)) {
+    registrarFallo(clave);
+    res.status(401).json({ error: codigoError });
+    return false;
+  }
+  limpiarFallos(clave);
+  return true;
 }
 
 // Exige que la peticion venga de un dispositivo autorizado (cookie firmada

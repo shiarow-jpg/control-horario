@@ -1,8 +1,8 @@
 // Rutas de fichaje (pantalla principal de kiosko). Protegidas por dispositivo.
 import { Router } from 'express';
 import { db, appendEvento } from '../db.js';
-import { checkSecret, hashSecret } from '../security.js';
-import { requireDevice, getClientIp } from '../auth.js';
+import { hashSecret } from '../security.js';
+import { requireDevice, getClientIp, checkSecretLimitado } from '../auth.js';
 import { getEmpleados, getEstado, marcajesPermitidos, TIPOS_MARCAJE, ETIQUETA_TIPO } from '../jornada.js';
 
 export const fichajeRouter = Router();
@@ -35,7 +35,7 @@ fichajeRouter.post('/verificar-pin', (req, res) => {
   const emp = db.prepare('SELECT id, nombre, pin_hash FROM empleados WHERE id = ? AND activo = 1').get(Number(req.body?.empleado_id));
   if (!emp) return res.status(404).json({ error: 'empleado_no_encontrado' });
   if (!emp.pin_hash) return res.status(409).json({ error: 'pin_no_configurado' });
-  if (!checkSecret(req.body?.pin, emp.pin_hash)) return res.status(401).json({ error: 'pin_incorrecto' });
+  if (!checkSecretLimitado(req, res, { ambito: 'pin', id: emp.id, plain: req.body?.pin, hash: emp.pin_hash, codigoError: 'pin_incorrecto' })) return;
   res.json({ ok: true, nombre: emp.nombre });
 });
 
@@ -43,7 +43,7 @@ fichajeRouter.post('/verificar-pin', (req, res) => {
 fichajeRouter.post('/cambiar-pin', (req, res) => {
   const emp = db.prepare('SELECT * FROM empleados WHERE id = ? AND activo = 1').get(Number(req.body?.empleado_id));
   if (!emp) return res.status(404).json({ error: 'empleado_no_encontrado' });
-  if (!checkSecret(req.body?.pin_actual, emp.pin_hash)) return res.status(401).json({ error: 'pin_incorrecto' });
+  if (!checkSecretLimitado(req, res, { ambito: 'pin', id: emp.id, plain: req.body?.pin_actual, hash: emp.pin_hash, codigoError: 'pin_incorrecto' })) return;
   const { nuevo, nuevo2 } = req.body || {};
   if (!/^\d{4}$/.test(String(nuevo || ''))) return res.status(400).json({ error: 'pin_formato' });
   if (nuevo !== nuevo2) return res.status(400).json({ error: 'pin_no_coincide' });
@@ -88,7 +88,7 @@ fichajeRouter.post('/fichar', (req, res) => {
     if (!emp.pin_hash) return res.status(409).json({ error: 'pin_no_configurado' });
     const { pin } = req.body || {};
     if (!/^\d{4}$/.test(String(pin || ''))) return res.status(400).json({ error: 'pin_formato' });
-    if (!checkSecret(pin, emp.pin_hash)) return res.status(401).json({ error: 'pin_incorrecto' });
+    if (!checkSecretLimitado(req, res, { ambito: 'pin', id: emp.id, plain: pin, hash: emp.pin_hash, codigoError: 'pin_incorrecto' })) return;
     const { estado } = getEstado(emp.id);
     if (!marcajesPermitidos(estado).includes(tipo)) {
       return res.status(409).json({ error: 'transicion_invalida', estado, permitidos: marcajesPermitidos(estado) });

@@ -1,5 +1,5 @@
 // Logica de la pantalla de fichaje (kiosko) + cola offline.
-import { api, toast, relojEn, iniciales, ETIQUETA, ETIQUETA_ESTADO } from './common.js';
+import { api, toast, mensajeError, relojEn, iniciales, ETIQUETA, ETIQUETA_ESTADO } from './common.js';
 
 const COLA_KEY = 'fichaje_cola_offline';
 const ACCIONES = [
@@ -156,7 +156,9 @@ async function fichar(tipo) {
     toast(`${seleccionado.nombre}: ${r.marcaje.etiqueta} registrada ✓`, 'ok');
     await refrescarYVolver();
   } catch (e) {
-    if (e.status === 401 && e.data?.error === 'pin_incorrecto') { toast('PIN incorrecto', 'bad'); pin = ''; pintarPin(); pintarAcciones(); return; }
+    if ((e.status === 401 && e.data?.error === 'pin_incorrecto') || e.status === 429) {
+      toast(mensajeError(e, 'PIN incorrecto'), 'bad'); pin = ''; pintarPin(); pintarAcciones(); return;
+    }
     if (e.status === 409 && e.data?.error === 'pin_no_configurado') {
       toast('Tu PIN fue restablecido. Crea uno nuevo.', '');
       seleccionado.pin_configurado = false; seleccionar(seleccionado); return;
