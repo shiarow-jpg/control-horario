@@ -80,6 +80,23 @@ function pintarGrid() {
     b.onclick = () => seleccionar(e);
     grid.appendChild(b);
   });
+  pintarResumen();
+}
+
+// Resumen del tablero: cuánta gente hay dentro ahora mismo. Es la
+// información que el encargado mira de un vistazo desde el mostrador.
+function pintarResumen() {
+  const cont = $('#resumenEstado');
+  if (!cont) return;
+  const cuenta = (est) => empleados.filter(e => e.estado === est).length;
+  const filas = [
+    { clase: 'viva', n: cuenta('trabajando'), etiqueta: 'trabajando' },
+    { clase: 'pausa', n: cuenta('en_pausa'), etiqueta: 'en almuerzo' },
+    { clase: '', n: cuenta('fuera'), etiqueta: 'fuera' },
+  ];
+  cont.innerHTML = filas
+    .map(f => `<p class="resumen-linea ${f.clase}"><span class="resumen-punto"></span><b>${f.n}</b> ${f.etiqueta}</p>`)
+    .join('');
 }
 
 async function seleccionar(e) {
@@ -93,6 +110,7 @@ async function seleccionar(e) {
   $('#vistaEmpleados').classList.add('hidden');
   $('#vistaFichar').classList.remove('hidden');
   $('#empNombre').textContent = e.nombre;
+  $('#fichaAvatar').textContent = iniciales(e.nombre);
 
   // Sin PIN configurado -> mostrar la creacion de PIN (primera vez o tras reset).
   const primera = !e.pin_configurado;

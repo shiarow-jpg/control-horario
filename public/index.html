@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Fichaje · Control Horario</title>
   <meta name="description" content="Registro de jornada laboral conforme al art. 34.9 del Estatuto de los Trabajadores: fichaje por PIN, informes y registro inalterable." />
-  <meta name="theme-color" content="#070d1c" />
+  <meta name="theme-color" content="#17130f" />
   <link rel="icon" href="/img/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/img/icon.svg" />
   <link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin />
@@ -37,46 +37,58 @@
         <p class="sub" style="margin-inline:auto">Este ordenador todavía no puede fichar. Ve a la pestaña <b>Administración</b> y autoriza este equipo (una sola vez).</p>
       </div>
 
-      <div id="vistaEmpleados" class="card pad hidden">
-        <div class="hora-hero">
+      <div id="vistaEmpleados" class="split hidden">
+        <aside class="board">
           <div>
             <p class="hora-grande"><span id="relojHora">--:--</span><span class="seg" id="relojSeg">00</span></p>
-            <p class="hora-fecha" id="relojFecha"></p>
+            <p class="board-dato" id="relojFecha"></p>
           </div>
-          <button class="btn btn-ghost btn-sm" id="btnMisFichajes">Mis fichajes</button>
+          <div class="board-pie">
+            <p class="board-label">Estado del equipo</p>
+            <div id="resumenEstado" class="resumen"></div>
+            <button class="btn btn-ghost btn-sm" id="btnMisFichajes">Mis fichajes</button>
+          </div>
+        </aside>
+        <div class="lienzo">
+          <h1 class="serif">¿Quién ficha?</h1>
+          <p class="sub">Toca tu nombre para fichar entrada, salida o almuerzo.</p>
+          <div id="offlineBanner" class="banner hidden" role="status">Sin conexión: los fichajes se guardan y se enviarán al recuperar internet. <span id="colaCount"></span></div>
+          <div class="empleados" id="grid"></div>
         </div>
-        <h1 class="titulo-fichar">¿Quién ficha?</h1>
-        <p class="sub">Toca tu nombre para fichar entrada, salida o almuerzo.</p>
-        <div id="offlineBanner" class="banner hidden" role="status">Sin conexión: los fichajes se guardan y se enviarán al recuperar internet. <span id="colaCount"></span></div>
-        <div class="empleados" id="grid"></div>
       </div>
 
-      <div id="vistaFichar" class="card pad hidden">
-        <div class="cabecera-seccion">
-          <h1 id="empNombre"></h1>
-          <button class="btn btn-ghost btn-sm" id="volver">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Cambiar
-          </button>
-        </div>
-        <p class="sub" id="empEstado"></p>
-
-        <!-- Entrada de PIN normal -->
-        <div id="pinNormal">
-          <div class="pindots" id="dots" role="img" aria-label="Dígitos introducidos del PIN"></div>
-          <p class="center muted pin-hint">Introduce tu PIN de 4 dígitos</p>
-          <div class="pinpad" id="pinpad"></div>
-          <div class="acciones mt" id="acciones"></div>
-        </div>
-
-        <!-- Primera vez: el empleado crea su PIN (el admin no lo conoce) -->
-        <div id="crearPin" class="hidden">
-          <div class="banner">Es tu primera vez. Crea tu PIN de 4 dígitos: será personal y secreto (ni el administrador lo sabrá).</div>
-          <div class="row">
-            <div><label for="cpPin">Nuevo PIN</label><input id="cpPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 dígitos" /></div>
-            <div><label for="cpPin2">Repite el PIN</label><input id="cpPin2" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Repite" /></div>
+      <div id="vistaFichar" class="split hidden">
+        <aside class="board">
+          <div>
+            <div class="ficha-avatar" id="fichaAvatar" aria-hidden="true"></div>
+            <h1 id="empNombre"></h1>
+            <p class="board-dato" id="empEstado"></p>
           </div>
-          <button class="btn btn-primary btn-sm mt" id="cpGuardar">Crear mi PIN</button>
+          <div class="board-pie">
+            <button class="btn btn-ghost btn-sm" id="volver">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Cambiar de persona
+            </button>
+          </div>
+        </aside>
+        <div class="lienzo">
+          <!-- Entrada de PIN normal -->
+          <div id="pinNormal">
+            <div class="pindots" id="dots" role="img" aria-label="Dígitos introducidos del PIN"></div>
+            <p class="center muted pin-hint">Introduce tu PIN de 4 dígitos</p>
+            <div class="pinpad" id="pinpad"></div>
+            <div class="acciones" id="acciones"></div>
+          </div>
+
+          <!-- Primera vez: el empleado crea su PIN (el admin no lo conoce) -->
+          <div id="crearPin" class="hidden">
+            <div class="banner">Es tu primera vez. Crea tu PIN de 4 dígitos: será personal y secreto (ni el administrador lo sabrá).</div>
+            <div class="row">
+              <div><label for="cpPin">Nuevo PIN</label><input id="cpPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 dígitos" /></div>
+              <div><label for="cpPin2">Repite el PIN</label><input id="cpPin2" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Repite" /></div>
+            </div>
+            <button class="btn btn-primary btn-sm mt" id="cpGuardar">Crear mi PIN</button>
+          </div>
         </div>
       </div>
 

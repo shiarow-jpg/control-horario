@@ -1,6 +1,6 @@
 {
   "name": "control-horario",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Aplicacion de fichaje / registro de jornada laboral (white-label, multi-empresa). Cumple Art. 34.9 ET: registro inalterable, conservacion 4 anos, export PDF.",
   "type": "module",
   "main": "src/server.js",
