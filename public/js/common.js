@@ -62,11 +62,24 @@ export function relojHeroEn(selHora, selSeg, selFecha) {
   const fmtHM = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: TZ, hour12: false });
   const fmtS = new Intl.DateTimeFormat('es-ES', { second: '2-digit', timeZone: TZ, hour12: false });
   const fmtF = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ });
+  // Cada cifra en su casilla de ancho fijo: la tipografía de cartel no
+  // tiene cifras tabulares y, si no, el reloj "baila" al cambiar de dígito.
+  const enCeldas = (txt) => [...txt]
+    .map(ch => /\d/.test(ch) ? `<span class="d">${ch}</span>` : `<span class="sep">${ch}</span>`)
+    .join('');
+  let ultimaHora = '', ultimoSeg = '', ultimaFecha = '';
   const tick = () => {
     const ahora = new Date();
-    hEl.textContent = fmtHM.format(ahora);
-    if (sEl) sEl.textContent = fmtS.format(ahora).padStart(2, '0');
-    if (fEl) fEl.textContent = fmtF.format(ahora);
+    const hm = fmtHM.format(ahora);
+    if (hm !== ultimaHora) { ultimaHora = hm; hEl.innerHTML = enCeldas(hm); }
+    if (sEl) {
+      const s = fmtS.format(ahora).padStart(2, '0');
+      if (s !== ultimoSeg) { ultimoSeg = s; sEl.innerHTML = enCeldas(s); }
+    }
+    if (fEl) {
+      const f = fmtF.format(ahora);
+      if (f !== ultimaFecha) { ultimaFecha = f; fEl.textContent = f; }
+    }
   };
   tick(); setInterval(tick, 1000);
 }
