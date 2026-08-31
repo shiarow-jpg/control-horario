@@ -239,6 +239,8 @@ h2 { font-family: var(--font-display); font-size: 17px; letter-spacing: .04em; t
 /* Casillas de cifra: las usan el reloj y los cronómetros por igual */
 .d { display: inline-block; width: .54em; text-align: center; }
 .sep { display: inline-block; width: .3em; text-align: center; }
+/* Salvo el de la ficha, que va en mono y no necesita casillas */
+.emp-crono .d, .emp-crono .sep { display: inline; width: auto; }
 .hora-grande .seg {
   font-size: clamp(17px, 1.7vw, 24px); color: var(--spot-txt);
   letter-spacing: .02em; align-self: flex-start; margin-top: .5em;
@@ -334,12 +336,23 @@ h2 { font-family: var(--font-display); font-size: 17px; letter-spacing: .04em; t
 /* Cronómetro en vivo, esquina superior */
 .emp-crono {
   position: absolute; top: 9px; right: 9px; z-index: 3;
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 3px 9px 3px 8px; border-radius: var(--r-pill);
-  font-size: 14px;
+  /* Bloque en línea, NO flex: si es flex, cada cifra pasa a ser un
+     elemento independiente y la separación se aplica entre todas,
+     ensanchando la píldora hasta comerse la ficha. */
+  display: inline-block; white-space: nowrap;
+  padding: 4px 9px 4px 8px; border-radius: var(--r-pill);
   background: var(--paper-3); border: 2px solid var(--ink); color: var(--ink);
+  /* Este va en monoespaciada, no en cartel: la condensada en casillas se
+     ensancha demasiado y la píldora se come las iniciales de la ficha.
+     Mono ya trae cifras tabulares, así que tampoco baila. */
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: 11.5px; font-weight: 700; letter-spacing: -.02em;
 }
-.emp-crono::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.emp-crono::before {
+  content: ''; display: inline-block; vertical-align: middle;
+  width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+  margin: -1px 6px 0 0;
+}
 
 /* Rótulo inferior de la viñeta */
 .emp-placa { display: flex; flex-direction: column; gap: 4px; padding: 11px 13px 13px; background: var(--paper-3); }
