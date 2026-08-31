@@ -10,29 +10,12 @@
 // cierre, al volver cierra las jornadas pendientes con la hora que tocaba.
 import { db, appendEvento } from './db.js';
 import { config } from './config.js';
-import { getEmpleados, getMarcajes, TRANSICIONES, diaLocal } from './jornada.js';
+import { getEmpleados, getMarcajes, TRANSICIONES, diaLocal, instanteLocal } from './jornada.js';
 
-// ---- Conversión de hora local de la empresa a instante UTC ----
-const fmtPartes = new Intl.DateTimeFormat('en-CA', {
-  timeZone: config.timezone, year: 'numeric', month: '2-digit', day: '2-digit',
-  hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-});
-function horaPared(d) {
-  const p = Object.fromEntries(fmtPartes.formatToParts(d).map(x => [x.type, x.value]));
-  const hh = p.hour === '24' ? '00' : p.hour; // algunos motores devuelven 24:00
-  return `${p.year}-${p.month}-${p.day}T${hh}:${p.minute}:${p.second}`;
-}
-// Instante UTC en el que el reloj local marca `dia` a las `hhmm`.
-// Dos pasadas de corrección bastan incluso con cambio de hora de por medio.
-export function instanteLocal(dia, hhmm) {
-  const objetivo = new Date(`${dia}T${hhmm}:00Z`).getTime();
-  let t = objetivo;
-  for (let i = 0; i < 2; i++) {
-    const mostrado = new Date(horaPared(new Date(t)) + 'Z').getTime();
-    t += objetivo - mostrado;
-  }
-  return new Date(t);
-}
+// El helper de hora local vive en jornada.js (lo comparten el vigilante y el
+// resumen del día); se reexporta para quien ya lo importaba de aquí.
+export { instanteLocal };
+
 const diaSiguiente = (dia) => new Date(new Date(dia + 'T12:00:00Z').getTime() + 86400000).toISOString().slice(0, 10);
 
 const fmtHoraLocal = new Intl.DateTimeFormat('es-ES', {

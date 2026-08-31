@@ -89,6 +89,47 @@ export const ETIQUETA = {
 };
 export const ETIQUETA_ESTADO = { fuera: 'Fuera', trabajando: 'Trabajando', en_pausa: 'En almuerzo' };
 
+// ---- Cronómetros en vivo ----
+// Un elemento con [data-crono] lleva el tiempo YA consolidado (data-base, en
+// segundos) y, si el tramo sigue abierto, el instante en que empezó
+// (data-desde). Un único temporizador los repinta a todos cada segundo, así
+// el contador avanza sin pedir nada al servidor.
+export function fmtCrono(seg) {
+  seg = Math.max(0, Math.floor(seg));
+  const h = Math.floor(seg / 3600), m = Math.floor((seg % 3600) / 60), s = seg % 60;
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+export function segundosCrono(el) {
+  const base = Number(el.dataset.base || 0);
+  const desde = el.dataset.desde;
+  if (!desde) return base;
+  return base + (Date.now() - new Date(desde).getTime()) / 1000;
+}
+
+export function pintarCronometros() {
+  for (const el of document.querySelectorAll('[data-crono]')) el.textContent = fmtCrono(segundosCrono(el));
+}
+
+let cronoIniciado = false;
+export function iniciarCronometros() {
+  if (cronoIniciado) return;
+  cronoIniciado = true;
+  pintarCronometros();
+  setInterval(pintarCronometros, 1000);
+}
+
+// Datos de cronómetro de un empleado, según su estado actual.
+// Trabajando: corre el tiempo de trabajo. En pausa: el trabajo queda
+// congelado y corre la pausa. Fuera: ambos quedan como registro del día.
+export function cronoDatos(e) {
+  const hoy = e.hoy || { trabajadoSeg: 0, pausaSeg: 0 };
+  return {
+    trabajo: { base: hoy.trabajadoSeg || 0, desde: e.estado === 'trabajando' ? e.desde : null },
+    pausa: { base: hoy.pausaSeg || 0, desde: e.estado === 'en_pausa' ? e.desde : null },
+  };
+}
+
 // Escapa texto para insertarlo en HTML (nombres, mensajes, motivos...).
 export function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

@@ -1,5 +1,6 @@
 // Logica de la pantalla de fichaje (kiosko) + cola offline.
-import { api, toast, mensajeError, relojEn, relojHeroEn, iniciales, ETIQUETA, ETIQUETA_ESTADO, esc } from './common.js';
+import { api, toast, mensajeError, relojEn, relojHeroEn, iniciales, ETIQUETA, ETIQUETA_ESTADO, esc,
+  cronoDatos, iniciarCronometros, pintarCronometros, fmtCrono, segundosCrono } from './common.js';
 
 const COLA_KEY = 'fichaje_cola_offline';
 const ACCIONES = [
@@ -22,6 +23,7 @@ let pin = '';
 const $ = (s) => document.querySelector(s);
 relojEn('#reloj');
 relojHeroEn('#relojHora', '#relojSeg', '#relojFecha');
+iniciarCronometros();
 
 function leerCola() { try { return JSON.parse(localStorage.getItem(COLA_KEY) || '[]'); } catch { return []; } }
 function guardarCola(c) { localStorage.setItem(COLA_KEY, JSON.stringify(c)); }
@@ -70,17 +72,44 @@ function pintarGrid() {
     // foco visible y los lectores de pantalla lo anuncian como pulsable.
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'emp';
+    b.className = `emp emp-${e.estado}`;
     b.style.setProperty('--i', i); // entrada escalonada
-    b.setAttribute('aria-label', `Fichar como ${e.nombre}. Estado actual: ${ETIQUETA_ESTADO[e.estado]}`);
+    const c = cronoDatos(e);
+    const dentro = e.estado !== 'fuera';
+    b.setAttribute('aria-label',
+      `Fichar como ${e.nombre}. Estado actual: ${ETIQUETA_ESTADO[e.estado]}` +
+      (dentro ? `. Lleva ${fmtCrono(c.trabajo.base + (c.trabajo.desde ? (Date.now() - new Date(c.trabajo.desde)) / 1000 : 0))} de trabajo hoy` : ''));
     b.innerHTML = `
-      <span class="avatar" aria-hidden="true">${esc(iniciales(e.nombre))}</span>
-      <span class="nombre">${esc(e.nombre)}</span>
-      <span class="estado est-${esc(e.estado)}">${esc(ETIQUETA_ESTADO[e.estado] || e.estado)}</span>`;
+      <span class="emp-holo" aria-hidden="true"></span>
+      <span class="emp-arte" aria-hidden="true">${esc(iniciales(e.nombre))}</span>
+      ${dentro ? `<span class="emp-crono" data-crono data-base="${c.trabajo.base}" data-desde="${c.trabajo.desde || ''}">0:00:00</span>` : ''}
+      <span class="emp-placa">
+        <span class="nombre">${esc(e.nombre)}</span>
+        <span class="estado est-${esc(e.estado)}">${esc(ETIQUETA_ESTADO[e.estado] || e.estado)}</span>
+      </span>`;
     b.onclick = () => seleccionar(e);
     grid.appendChild(b);
   });
   pintarResumen();
+  pintarCronometros();
+}
+
+// Cronómetro de la persona seleccionada: lo que lleva trabajado HOY,
+// corriendo en vivo, y el almuerzo ya registrado (que queda congelado
+// mientras trabaja y avanza mientras está en pausa).
+function pintarCrono(e) {
+  const panel = $('#fichaCrono');
+  const c = cronoDatos(e);
+  const dentro = e.estado !== 'fuera';
+  const hayRegistro = dentro || c.trabajo.base > 0 || c.pausa.base > 0;
+  panel.classList.toggle('hidden', !hayRegistro);
+  if (!hayRegistro) return;
+  panel.classList.toggle('en-pausa', e.estado === 'en_pausa');
+  const t = $('#cronoTrabajo'), p = $('#cronoPausa');
+  t.dataset.base = c.trabajo.base; t.dataset.desde = c.trabajo.desde || '';
+  p.dataset.base = c.pausa.base;   p.dataset.desde = c.pausa.desde || '';
+  $('#cronoPausa').closest('.crono-pausa').classList.toggle('hidden', c.pausa.base === 0 && !c.pausa.desde);
+  pintarCronometros();
 }
 
 // Resumen del tablero: cuánta gente hay dentro ahora mismo. Es la
@@ -90,12 +119,12 @@ function pintarResumen() {
   if (!cont) return;
   const cuenta = (est) => empleados.filter(e => e.estado === est).length;
   const filas = [
-    { clase: 'viva', n: cuenta('trabajando'), etiqueta: 'trabajando' },
-    { clase: 'pausa', n: cuenta('en_pausa'), etiqueta: 'en almuerzo' },
+    { clase: 'viva', n: cuenta('trabajando'), etiqueta: 'en tienda' },
+    { clase: 'pausa', n: cuenta('en_pausa'), etiqueta: 'almorzando' },
     { clase: '', n: cuenta('fuera'), etiqueta: 'fuera' },
   ];
   cont.innerHTML = filas
-    .map(f => `<p class="resumen-linea ${f.clase}"><span class="resumen-punto"></span><b>${f.n}</b> ${f.etiqueta}</p>`)
+    .map(f => `<div class="marcador-dato ${f.clase}"><b>${f.n}</b><span>${f.etiqueta}</span></div>`)
     .join('');
 }
 
@@ -120,9 +149,11 @@ async function seleccionar(e) {
     $('#empEstado').textContent = 'Crea tu PIN de 4 dígitos para empezar a fichar.';
     $('#cpPin').value = ''; $('#cpPin2').value = '';
   } else {
+    const hora = (iso) => new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Atlantic/Canary', hour12: false }).format(new Date(iso));
     $('#empEstado').textContent = e.estado === 'trabajando' && e.desde
-      ? `Trabajando desde las ${new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Atlantic/Canary', hour12: false }).format(new Date(e.desde))}`
-      : e.estado === 'en_pausa' ? 'En pausa de almuerzo' : 'Actualmente fuera';
+      ? `Trabajando desde las ${hora(e.desde)}`
+      : e.estado === 'en_pausa' && e.desde ? `En almuerzo desde las ${hora(e.desde)}` : 'Actualmente fuera';
+    pintarCrono(e);
     pintarPin(); pintarPad(); pintarAcciones();
   }
 }

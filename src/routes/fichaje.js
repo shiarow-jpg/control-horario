@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { db, appendEvento } from '../db.js';
 import { hashSecret } from '../security.js';
 import { requireDevice, getClientIp, checkSecretLimitado } from '../auth.js';
-import { getEmpleados, getEstado, marcajesPermitidos, TIPOS_MARCAJE, ETIQUETA_TIPO } from '../jornada.js';
+import { getEmpleados, getEstado, marcajesPermitidos, resumenHoy, TIPOS_MARCAJE, ETIQUETA_TIPO } from '../jornada.js';
 
 export const fichajeRouter = Router();
 fichajeRouter.use(requireDevice);
@@ -12,7 +12,7 @@ fichajeRouter.use(requireDevice);
 fichajeRouter.get('/empleados', (req, res) => {
   const empleados = getEmpleados({ soloActivos: true }).map(e => {
     const { estado, desde } = getEstado(e.id);
-    return { id: e.id, nombre: e.nombre, estado, desde, pin_configurado: !!e.pin_configurado };
+    return { id: e.id, nombre: e.nombre, estado, desde, hoy: resumenHoy(e.id), pin_configurado: !!e.pin_configurado };
   });
   res.json({ empleados, dispositivo: req.dispositivo.nombre });
 });
@@ -56,7 +56,7 @@ fichajeRouter.get('/estado/:id', (req, res) => {
   const emp = db.prepare('SELECT id, nombre, pin_hash FROM empleados WHERE id = ? AND activo = 1').get(Number(req.params.id));
   if (!emp) return res.status(404).json({ error: 'empleado_no_encontrado' });
   const { estado, desde } = getEstado(emp.id);
-  res.json({ id: emp.id, nombre: emp.nombre, estado, desde, permitidos: marcajesPermitidos(estado), pin_configurado: !!emp.pin_hash });
+  res.json({ id: emp.id, nombre: emp.nombre, estado, desde, hoy: resumenHoy(emp.id), permitidos: marcajesPermitidos(estado), pin_configurado: !!emp.pin_hash });
 });
 
 // Registrar un marcaje.

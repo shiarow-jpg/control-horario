@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Fichaje · Control Horario</title>
   <meta name="description" content="Registro de jornada laboral conforme al art. 34.9 del Estatuto de los Trabajadores: fichaje por PIN, informes y registro inalterable." />
-  <meta name="theme-color" content="#17130f" />
+  <meta name="theme-color" content="#07060c" />
   <link rel="icon" href="/img/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/img/icon.svg" />
   <link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/fonts/geist-mono-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/anton-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/css/styles.css" />
   <link rel="manifest" href="/manifest.json" />
 </head>
@@ -37,21 +38,18 @@
         <p class="sub" style="margin-inline:auto">Este ordenador todavía no puede fichar. Ve a la pestaña <b>Administración</b> y autoriza este equipo (una sola vez).</p>
       </div>
 
-      <div id="vistaEmpleados" class="split hidden">
-        <aside class="board">
-          <div>
+      <div id="vistaEmpleados" class="escena hidden">
+        <div class="marquesina">
+          <div class="reloj-bloque">
             <p class="hora-grande"><span id="relojHora">--:--</span><span class="seg" id="relojSeg">00</span></p>
-            <p class="board-dato" id="relojFecha"></p>
+            <p class="hora-fecha" id="relojFecha"></p>
           </div>
-          <div class="board-pie">
-            <p class="board-label">Estado del equipo</p>
-            <div id="resumenEstado" class="resumen"></div>
-            <button class="btn btn-ghost btn-sm" id="btnMisFichajes">Mis fichajes</button>
-          </div>
-        </aside>
-        <div class="lienzo">
-          <h1 class="serif">¿Quién ficha?</h1>
-          <p class="sub">Toca tu nombre para fichar entrada, salida o almuerzo.</p>
+          <div id="resumenEstado" class="marcador"></div>
+          <button class="btn btn-ghost btn-sm" id="btnMisFichajes">Mis fichajes</button>
+        </div>
+        <div class="escena-cuerpo">
+          <h1 class="titulo-xl" data-texto="¿Quién ficha?">¿Quién ficha?</h1>
+          <p class="sub">Toca tu ficha para registrar entrada, salida o almuerzo.</p>
           <div id="offlineBanner" class="banner hidden" role="status">Sin conexión: los fichajes se guardan y se enviarán al recuperar internet. <span id="colaCount"></span></div>
           <div class="empleados" id="grid"></div>
         </div>
@@ -59,10 +57,18 @@
 
       <div id="vistaFichar" class="split hidden">
         <aside class="board">
-          <div>
-            <div class="ficha-avatar" id="fichaAvatar" aria-hidden="true"></div>
+          <div class="board-ficha">
+            <div class="ficha-carta">
+              <span class="ficha-holo" aria-hidden="true"></span>
+              <span class="ficha-avatar" id="fichaAvatar" aria-hidden="true"></span>
+            </div>
             <h1 id="empNombre"></h1>
             <p class="board-dato" id="empEstado"></p>
+            <div id="fichaCrono" class="crono-panel hidden">
+              <p class="board-label">Hoy llevas</p>
+              <p class="crono-grande"><span id="cronoTrabajo" data-crono data-base="0">0:00:00</span></p>
+              <p class="crono-pausa">Almuerzo registrado: <span id="cronoPausa" data-crono data-base="0">0:00:00</span></p>
+            </div>
           </div>
           <div class="board-pie">
             <button class="btn btn-ghost btn-sm" id="volver">

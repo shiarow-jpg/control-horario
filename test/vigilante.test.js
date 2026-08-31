@@ -13,7 +13,7 @@ process.env.FICHAJE_DATA_DIR = mkdtempSync(join(tmpdir(), 'fichaje-test-'));
 
 const { db, appendEvento, verificarCadena } = await import('../src/db.js');
 const { revisarJornadas, instanteLocal, getJornadaAbierta } = await import('../src/vigilante.js');
-const { getEstado } = await import('../src/jornada.js');
+const { getEstado, resumenHoy } = await import('../src/jornada.js');
 
 function nuevoEmpleado(nombre) {
   return Number(db.prepare(
@@ -102,6 +102,19 @@ test('una jornada normal en curso no genera avisos ni cierres', () => {
   assert.equal(salidasDe(id).length, 0);
   assert.equal(avisosDe(id, 'exceso_jornada').length, 0);
   assert.deepEqual(getJornadaAbierta(id).estado, 'trabajando');
+});
+
+test('resumenHoy da el trabajo consolidado y el almuerzo del día', () => {
+  const id = nuevoEmpleado('Crono Ruiz');
+  ficha(id, 'entrada', instanteLocal('2026-08-20', '09:00'));
+  ficha(id, 'inicio_pausa', instanteLocal('2026-08-20', '11:00'));
+  ficha(id, 'fin_pausa', instanteLocal('2026-08-20', '11:30'));
+
+  const r = resumenHoy(id, instanteLocal('2026-08-20', '13:00'));
+  assert.equal(r.trabajadoSeg, 7200, '09:00 a 11:00 = 2 h ya cerradas');
+  assert.equal(r.pausaSeg, 1800, '30 min de almuerzo registrados');
+  // El tramo abierto (11:30 en adelante) NO se incluye a propósito: es el
+  // navegador quien lo cuenta en vivo a partir de `desde`, sin pedir nada.
 });
 
 test('la cadena de hashes sigue íntegra tras los cierres automáticos', () => {

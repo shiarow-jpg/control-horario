@@ -12,6 +12,30 @@ export const diaLocal = (d) => fmtDiaLocal.format(new Date(d));
 export const hoyLocal = () => diaLocal(new Date());
 export const inicioMesLocal = () => hoyLocal().slice(0, 8) + '01';
 
+// ---- Conversión de "hora de pared" local a instante UTC ----
+// Necesario para saber cuándo empieza el día local o cuándo son las 22:30
+// en Canarias sin depender de la zona horaria de la máquina.
+const fmtPartes = new Intl.DateTimeFormat('en-CA', {
+  timeZone: config.timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+});
+function horaPared(d) {
+  const p = Object.fromEntries(fmtPartes.formatToParts(d).map(x => [x.type, x.value]));
+  const hh = p.hour === '24' ? '00' : p.hour; // algunos motores devuelven 24:00
+  return `${p.year}-${p.month}-${p.day}T${hh}:${p.minute}:${p.second}`;
+}
+// Instante UTC en el que el reloj local marca `dia` a las `hhmm`.
+// Dos pasadas de corrección bastan incluso con cambio de hora de por medio.
+export function instanteLocal(dia, hhmm) {
+  const objetivo = new Date(`${dia}T${hhmm}:00Z`).getTime();
+  let t = objetivo;
+  for (let i = 0; i < 2; i++) {
+    const mostrado = new Date(horaPared(new Date(t)) + 'Z').getTime();
+    t += objetivo - mostrado;
+  }
+  return new Date(t);
+}
+
 export const TIPOS_MARCAJE = ['entrada', 'salida', 'inicio_pausa', 'fin_pausa'];
 
 export const ETIQUETA_TIPO = {
@@ -142,6 +166,21 @@ export function calcularJornada(empleadoId, desde, hasta) {
   // Marca si el empleado quedo "abierto" (sin salida) dentro del periodo.
   const abierto = estado !== 'fuera';
   return { dias: lista, totalTrabajadoSeg, totalPausaSeg, abierto };
+}
+
+// Tiempo YA CONSOLIDADO de hoy (tramos cerrados): lo que el navegador usa
+// como punto de partida para el cronómetro en vivo. El tramo abierto no se
+// incluye aquí; lo cuenta el cliente a partir de `desde`, así el contador
+// avanza sin pedir nada al servidor.
+export function resumenHoy(empleadoId, ahora = new Date()) {
+  const hoy = diaLocal(ahora);
+  const desde = instanteLocal(hoy, '00:00').toISOString();
+  const j = calcularJornada(empleadoId, desde, ahora.toISOString());
+  const d = j.dias.find(x => x.fecha === hoy);
+  return {
+    trabajadoSeg: Math.max(0, Math.round(d?.trabajadoSeg || 0)),
+    pausaSeg: Math.max(0, Math.round(d?.pausaSeg || 0)),
+  };
 }
 
 // Correcciones que afectan al periodo (para mostrarlas en el informe con su
