@@ -156,6 +156,19 @@ adminRouter.post('/solicitudes/:id/resolver', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ---- Avisos automáticos (exceso de jornada, cierres automáticos) ----
+adminRouter.get('/avisos', requireAdmin, (req, res) => {
+  const avisos = db.prepare(`SELECT a.id, a.tipo, a.mensaje, a.creado_en, a.visto, e.nombre AS empleado
+    FROM avisos a LEFT JOIN empleados e ON e.id = a.empleado_id
+    ORDER BY a.visto ASC, a.creado_en DESC LIMIT 100`).all();
+  res.json({ avisos });
+});
+
+adminRouter.post('/avisos/vistos', requireAdmin, (req, res) => {
+  db.prepare('UPDATE avisos SET visto = 1 WHERE visto = 0').run();
+  res.json({ ok: true });
+});
+
 // Eventos en bruto (auditoria), incluidos anulados y anulaciones.
 adminRouter.get('/eventos/:empleadoId', requireAdmin, (req, res) => {
   const rows = db.prepare('SELECT * FROM eventos WHERE empleado_id = ? ORDER BY ts_efectivo DESC, seq DESC LIMIT 500')

@@ -85,6 +85,21 @@ CREATE TABLE IF NOT EXISTS solicitudes (
 
 CREATE INDEX IF NOT EXISTS idx_solic_estado ON solicitudes(estado, creada_en);
 CREATE INDEX IF NOT EXISTS idx_solic_emp ON solicitudes(empleado_id, creada_en);
+
+-- Avisos automáticos para el administrador (jornada excesiva, cierre automático).
+-- Mutable (no es fuente legal); la huella legal de un cierre va a 'eventos'.
+-- 'clave' es única para no repetir el mismo aviso (p.ej. exceso:5:2026-08-31).
+CREATE TABLE IF NOT EXISTS avisos (
+  id          INTEGER PRIMARY KEY,
+  tipo        TEXT NOT NULL,             -- exceso_jornada | cierre_automatico
+  empleado_id INTEGER REFERENCES empleados(id),
+  clave       TEXT NOT NULL UNIQUE,
+  mensaje     TEXT NOT NULL,
+  creado_en   TEXT NOT NULL,
+  visto       INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_avisos_visto ON avisos(visto, creado_en);
 `);
 
 // Migraciones suaves: anaden columnas a BDs ya creadas (no falla si ya existen).

@@ -1,7 +1,7 @@
 // Service worker: cachea el "shell" para que la app cargue sin conexion.
 // Las llamadas al API NO se cachean (van siempre a red); los fichajes offline
 // se gestionan con la cola en localStorage (ver fichar.js).
-const CACHE = 'fichaje-mn-v4';
+const CACHE = 'fichaje-mn-v5';
 const SHELL = [
   '/', '/index.html',
   '/css/styles.css', '/js/app.js', '/js/common.js', '/js/fichar.js', '/js/mis-fichajes.js', '/js/admin.js',

@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const ROOT = join(__dirname, '..');
-export const DATA_DIR = join(ROOT, 'data');
+// FICHAJE_DATA_DIR permite aislar los datos (tests); en producción no se usa.
+export const DATA_DIR = process.env.FICHAJE_DATA_DIR || join(ROOT, 'data');
 
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
@@ -46,4 +47,10 @@ export const config = {
   enforceDeviceIp: process.env.ENFORCE_DEVICE_IP === 'true',
   // Zona horaria para mostrar/calcular (Canarias).
   timezone: process.env.TZ || 'Atlantic/Canary',
+  // Vigilante de jornadas olvidadas:
+  // - Aviso al admin si alguien lleva más de N horas trabajando sin salida.
+  // - Cierre automático de toda jornada abierta a esta hora local (el centro
+  //   cierra antes). Cadena vacía en CIERRE_AUTO_HORA lo desactiva.
+  avisoHorasMax: Number(process.env.AVISO_HORAS_MAX) || 12,
+  cierreAutoHora: process.env.CIERRE_AUTO_HORA ?? '22:30',
 };

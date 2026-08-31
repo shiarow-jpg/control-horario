@@ -2,7 +2,7 @@
 // La contraseña se exige CADA VEZ que se entra en la pestaña: enterAdmin()
 // cierra cualquier sesión previa y muestra el login; leaveAdmin() cierra sesión
 // al salir. Así, cambiar a Fichaje y volver obliga a introducir la contraseña.
-import { api, toast, mensajeError, fmtFecha, fmtHora, ETIQUETA, hoyLocalStr, inicioMesLocalStr } from './common.js';
+import { api, toast, mensajeError, fmtFecha, fmtHora, ETIQUETA, hoyLocalStr, inicioMesLocalStr, esc } from './common.js';
 
 const $ = (s) => document.querySelector(s);
 const show = (s) => $(s).classList.remove('hidden');
@@ -32,8 +32,11 @@ function abrirPanel() {
   hide('#vistaSetup'); hide('#vistaLogin'); show('#vistaPanel');
   $('#infHasta').value = hoyLocalStr();
   $('#infDesde').value = inicioMesLocalStr();
-  cargarDispositivos(); cargarEmpleados(); cargarSolicitudes(); cargarIntegridadSilenciosa();
+  cargarDispositivos(); cargarEmpleados(); cargarAvisos(); cargarSolicitudes(); cargarIntegridadSilenciosa();
 }
+
+// Pide a app.js que actualice el badge de la pestaña (contadores de pendientes).
+const refrescarBadgeTab = () => document.dispatchEvent(new CustomEvent('notifs-refresh'));
 
 // ---- Setup / login ----
 $('#btnSetup').onclick = async () => {
@@ -183,7 +186,8 @@ async function cargarInforme() {
       const marc = d.marcajes.map(m => {
         const corr = (m.origen === 'manual' || m.origen === 'solicitud') ? ` <span class="pill tag-manual" title="${(m.motivo || '').replace(/"/g, '')}">corregido</span>` : '';
         const sinc = m.origen === 'offline_sync' ? ' <span class="pill tag-sync">sinc</span>' : '';
-        return `${fmtHora(m.ts)} ${ETIQUETA[m.tipo]}${corr}${sinc}`;
+        const auto = m.origen === 'auto' ? ` <span class="pill tag-auto" title="${(m.motivo || '').replace(/"/g, '')}">auto</span>` : '';
+        return `${fmtHora(m.ts)} ${ETIQUETA[m.tipo]}${corr}${sinc}${auto}`;
       }).join(' · ');
       h += `<tr><td>${fmtFecha(d.fecha)}</td><td>${marc}</td><td><b>${d.trabajado}</b></td><td class="muted">${d.pausa}</td></tr>`;
     }
@@ -211,6 +215,34 @@ $('#btnPdf').onclick = () => {
   const desde = $('#infDesde').value, hasta = $('#infHasta').value;
   if (!empleado_id) return toast('Selecciona empleado', 'bad');
   window.open(`/api/admin/informe/pdf?empleado_id=${empleado_id}&desde=${desde}&hasta=${hasta}`, '_blank');
+};
+
+// ---- Avisos automáticos (exceso de jornada, cierre automático) ----
+const ETIQUETA_AVISO = { exceso_jornada: 'Jornada larga', cierre_automatico: 'Cierre automático' };
+async function cargarAvisos() {
+  const { avisos } = await api('/api/admin/avisos');
+  const nuevos = avisos.filter(a => !a.visto).length;
+  const badge = $('#avisosBadge');
+  badge.classList.toggle('hidden', nuevos === 0);
+  badge.textContent = nuevos ? `${nuevos} nuevo${nuevos > 1 ? 's' : ''}` : '';
+  $('#btnAvisosVistos').classList.toggle('hidden', nuevos === 0);
+  if (!avisos.length) { $('#listaAvisos').innerHTML = '<p class="muted">Sin avisos. Aquí aparecerá si alguien pasa demasiadas horas fichado o si una jornada se cierra sola.</p>'; return; }
+  let h = '<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Aviso</th></tr></thead><tbody>';
+  for (const a of avisos) {
+    const tipo = ETIQUETA_AVISO[a.tipo] || a.tipo;
+    h += `<tr${a.visto ? ' class="muted"' : ''}><td>${fmtFecha(a.creado_en.slice(0, 10))} ${fmtHora(a.creado_en)}</td>
+      <td><span class="pill ${a.tipo === 'cierre_automatico' ? 'tag-auto' : 'est-pendiente'}">${esc(tipo)}</span>${a.visto ? '' : ' <b>·</b>'}</td>
+      <td>${esc(a.mensaje)}</td></tr>`;
+  }
+  $('#listaAvisos').innerHTML = h + '</tbody></table>';
+}
+
+$('#btnAvisosVistos').onclick = async () => {
+  try {
+    await api('/api/admin/avisos/vistos', { method: 'POST' });
+    toast('Avisos marcados como vistos ✓', 'ok');
+    cargarAvisos(); refrescarBadgeTab();
+  } catch { toast('No se pudo marcar', 'bad'); }
 };
 
 // ---- Solicitudes (el empleado pide, el admin aprueba/deniega) ----
@@ -243,7 +275,7 @@ async function resolver(id, decision) {
   try {
     await api(`/api/admin/solicitudes/${id}/resolver`, { method: 'POST', body: { decision, nota } });
     toast(decision === 'aprobar' ? 'Solicitud aprobada ✓' : 'Solicitud denegada', decision === 'aprobar' ? 'ok' : '');
-    cargarSolicitudes();
+    cargarSolicitudes(); refrescarBadgeTab();
   } catch (e) { toast(e.data?.error === 'ya_resuelta' ? 'Ya estaba resuelta' : 'No se pudo resolver', 'bad'); }
 }
 

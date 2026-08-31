@@ -19,7 +19,7 @@
 
   <div class="tabs">
     <button class="tab active" data-tab="fichaje">Fichaje</button>
-    <button class="tab" data-tab="admin">Administración</button>
+    <button class="tab" data-tab="admin">Administración<span id="tabAdminBadge" class="notif-dot hidden" role="status" aria-live="polite"></span></button>
   </div>
 
   <main class="wrap">
@@ -239,6 +239,15 @@
             <p class="sub mt">Ya no aparecen en la pantalla de fichaje, pero su registro se conserva y se puede consultar en "Informes y registro" por si lo solicitan tras dejar la empresa.</p>
             <div id="listaBaja"></div>
           </details>
+        </div>
+
+        <div class="card pad mb">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h2 style="margin:0">Avisos <span id="avisosBadge" class="estado-pill est-pendiente hidden"></span></h2>
+            <button class="btn btn-ghost btn-sm" id="btnAvisosVistos">Marcar como vistos</button>
+          </div>
+          <p class="sub">Notificaciones automáticas: jornadas con más horas de la cuenta y cierres automáticos por olvido de salida.</p>
+          <div id="listaAvisos"></div>
         </div>
 
         <div class="card pad mb">

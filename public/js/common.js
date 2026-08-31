@@ -66,6 +66,11 @@ export const ETIQUETA = {
 };
 export const ETIQUETA_ESTADO = { fuera: 'Fuera', trabajando: 'Trabajando', en_pausa: 'En almuerzo' };
 
+// Escapa texto para insertarlo en HTML (nombres, mensajes, motivos...).
+export function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 export function iniciales(nombre) {
   return nombre.split(/\s+/).slice(0, 2).map(p => p[0] || '').join('').toUpperCase();
 }

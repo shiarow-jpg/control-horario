@@ -4,7 +4,8 @@ import cookieParser from 'cookie-parser';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { config, ROOT, DATA_DIR } from './config.js';
-import './db.js'; // inicializa el esquema
+import { db } from './db.js'; // inicializa el esquema
+import { iniciarVigilante } from './vigilante.js';
 import { fichajeRouter } from './routes/fichaje.js';
 import { empleadoRouter } from './routes/empleado.js';
 import { adminRouter } from './routes/admin.js';
@@ -33,11 +34,22 @@ app.use((req, res, next) => {
 // y si hay sesion admin, para decidir que pantalla mostrar.
 app.get('/api/contexto', (req, res) => {
   const disp = deviceInfo(req);
+  // Contadores de pendientes: solo para equipos autorizados (los PCs de la
+  // tienda). Alimentan el indicador de notificaciones de la pestaña Admin
+  // sin revelar ningún detalle antes de introducir la contraseña.
+  let pendientes = null;
+  if (disp || isAdmin(req)) {
+    pendientes = {
+      solicitudes: db.prepare("SELECT COUNT(*) c FROM solicitudes WHERE estado = 'pendiente'").get().c,
+      avisos: db.prepare('SELECT COUNT(*) c FROM avisos WHERE visto = 0').get().c,
+    };
+  }
   res.json({
     dispositivoAutorizado: !!disp,
     dispositivoNombre: disp?.nombre || null,
     admin: isAdmin(req),
     empresa: config.empresa.nombre,
+    pendientes,
   });
 });
 
@@ -74,3 +86,6 @@ app.listen(config.port, () => {
   console.log(`  Escuchando en http://localhost:${config.port}`);
   console.log(`  Zona horaria: ${config.timezone}\n`);
 });
+
+// Vigilante de jornadas: avisos de exceso y cierre automático a la hora límite.
+iniciarVigilante();

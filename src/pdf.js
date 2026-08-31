@@ -104,7 +104,7 @@ export function generarInformePDF(stream, { empleado, desde, hasta }) {
     doc.fontSize(10).font('Helvetica-Bold')
       .text(`${fechaTxt}  —  Trabajado: ${fmtDuracion(d.trabajadoSeg)}  (pausa ${fmtDuracion(d.pausaSeg)})`);
     const linea = d.marcajes.map(m => {
-      const flag = m.origen === 'offline_sync' ? ' (sinc.)' : (m.origen === 'manual' || m.origen === 'solicitud') ? ' (corregido)' : '';
+      const flag = m.origen === 'offline_sync' ? ' (sinc.)' : (m.origen === 'manual' || m.origen === 'solicitud') ? ' (corregido)' : m.origen === 'auto' ? ' (cierre automático)' : '';
       return `${fmtHora.format(new Date(m.ts_efectivo))} ${ETIQUETA_TIPO[m.tipo]}${flag}`;
     }).join('   ·   ');
     doc.fontSize(9).font('Helvetica').fillColor('#333').text(`   ${linea}`).fillColor('#000');

@@ -20,6 +20,29 @@ const $ = (s) => document.querySelector(s);
   } catch { /* sin conexion: se queda el valor por defecto del HTML */ }
 })();
 
+// ---- Indicador de notificaciones pendientes (solicitudes + avisos) ----
+// El dueño no siempre entra en Administración: este badge en la propia
+// pestaña le avisa de que hay algo pendiente de revisar, sin revelar detalles.
+async function refrescarNotificaciones() {
+  try {
+    const ctx = await api('/api/contexto');
+    const p = ctx.pendientes;
+    const total = p ? (p.solicitudes || 0) + (p.avisos || 0) : 0;
+    const badge = $('#tabAdminBadge');
+    if (!badge) return;
+    badge.classList.toggle('hidden', total === 0);
+    badge.textContent = total > 99 ? '99+' : (total || '');
+    const tabAdmin = document.querySelector('.tab[data-tab="admin"]');
+    if (tabAdmin) tabAdmin.title = total
+      ? `Tienes ${total} notificación${total > 1 ? 'es' : ''} pendiente${total > 1 ? 's' : ''} de revisión`
+      : '';
+  } catch { /* sin conexión: se mantiene el último estado */ }
+}
+refrescarNotificaciones();
+setInterval(refrescarNotificaciones, 60 * 1000);
+document.addEventListener('notifs-refresh', refrescarNotificaciones);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refrescarNotificaciones(); });
+
 // ---- Pestañas ----
 // Al entrar en Administración se exige la contraseña SIEMPRE; al salir se cierra
 // la sesión, de modo que volver a entrar vuelve a pedirla (requisito de seguridad).

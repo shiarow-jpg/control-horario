@@ -21,7 +21,8 @@ function pintarFichajes(r) {
     const marc = d.marcajes.map(m => {
       const corr = (m.origen === 'manual' || m.origen === 'solicitud') ? ` <span class="pill tag-manual" title="${m.motivo || ''}">corregido</span>` : '';
       const sinc = m.origen === 'offline_sync' ? ' <span class="pill tag-sync">sinc</span>' : '';
-      return `${fmtHora(m.ts)} ${ETIQUETA[m.tipo]}${corr}${sinc}`;
+      const auto = m.origen === 'auto' ? ` <span class="pill tag-auto" title="${m.motivo || ''}">auto</span>` : '';
+      return `${fmtHora(m.ts)} ${ETIQUETA[m.tipo]}${corr}${sinc}${auto}`;
     }).join(' · ');
     html += `<tr><td>${fmtFecha(d.fecha)}</td><td>${marc}</td><td><b>${d.trabajado}</b></td></tr>`;
   }
