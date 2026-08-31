@@ -1,5 +1,5 @@
 // "Mi cuenta" del empleado: fichajes + solicitudes (corrección / ausencia).
-import { api, toast, mensajeError, fmtFecha, fmtHora, ETIQUETA, hoyLocalStr, inicioMesLocalStr } from './common.js';
+import { api, toast, mensajeError, fmtFecha, fmtHora, ETIQUETA, hoyLocalStr, inicioMesLocalStr, esc } from './common.js';
 
 const $ = (s) => document.querySelector(s);
 const ETIQUETA_ESTADO_SOL = { pendiente: 'Pendiente', aprobada: 'Aprobada', denegada: 'Denegada' };
@@ -12,9 +12,9 @@ function pinOk() {
 
 // ---- Mis fichajes (consulta + PDF) ----
 function pintarFichajes(r) {
-  let html = `<div class="banner" style="background:rgba(90,140,255,.12);border-color:rgba(90,140,255,.4);color:#9cc0ff">
-    <b>${r.empleado}</b> · Total trabajado: <b>${r.totalTrabajado}</b> · Pausas: ${r.totalPausa}
-    ${r.abierto ? ' · <span style="color:#f1c40f">Jornada sin cerrar</span>' : ''}</div>`;
+  let html = `<div class="banner resumen">
+    <span><b>${esc(r.empleado)}</b> · Total trabajado: <b>${esc(r.totalTrabajado)}</b> · Pausas: ${esc(r.totalPausa)}
+    ${r.abierto ? ' · <b>Jornada sin cerrar</b>' : ''}</span></div>`;
   if (!r.dias.length) { html += '<p class="muted">Sin fichajes en el periodo.</p>'; $('#mfResultado').innerHTML = html; return; }
   html += '<table><thead><tr><th>Día</th><th>Marcajes</th><th>Trabajado</th></tr></thead><tbody>';
   for (const d of r.dias) {
@@ -57,7 +57,7 @@ async function cargarParaAnular() {
     const desde = inicioMesLocalStr(), hasta = hoyLocalStr();
     const r = await api('/api/mis-fichajes/consulta', { method: 'POST', body: { ...auth(), desde, hasta } });
     const ops = [];
-    for (const d of r.dias) for (const m of d.marcajes) ops.push(`<option value="${m.id}">${fmtFecha(d.fecha)} ${fmtHora(m.ts)} · ${ETIQUETA[m.tipo]}</option>`);
+    for (const d of r.dias) for (const m of d.marcajes) ops.push(`<option value="${m.id}">${fmtFecha(d.fecha)} ${fmtHora(m.ts)} · ${esc(ETIQUETA[m.tipo] || m.tipo)}</option>`);
     $('#corrRef').innerHTML = ops.length ? ops.join('') : '<option value="">(sin fichajes este mes)</option>';
     toast('Fichajes cargados', 'ok');
   } catch (e) { toast(mensajeError(e, 'No se pudo cargar'), 'bad'); }
@@ -113,8 +113,8 @@ async function verMisSolicitudes() {
     let h = '<table><thead><tr><th>Tipo</th><th>Detalle</th><th>Motivo</th><th>Estado</th></tr></thead><tbody>';
     for (const s of solicitudes) {
       h += `<tr><td>${s.clase === 'correccion' ? 'Corrección' : 'Ausencia'}</td>
-        <td>${s.detalle}</td><td class="muted">${s.motivo || ''}</td>
-        <td><span class="estado-pill est-${s.estado}">${ETIQUETA_ESTADO_SOL[s.estado]}</span>${s.nota_admin ? `<br><span class="muted" style="font-size:11px">${s.nota_admin}</span>` : ''}</td></tr>`;
+        <td>${esc(s.detalle)}</td><td class="muted">${esc(s.motivo || '')}</td>
+        <td><span class="estado-pill est-${esc(s.estado)}">${esc(ETIQUETA_ESTADO_SOL[s.estado] || s.estado)}</span>${s.nota_admin ? `<br><span class="muted nota-admin">${esc(s.nota_admin)}</span>` : ''}</td></tr>`;
     }
     $('#ssLista').innerHTML = h + '</tbody></table>';
   } catch (e) { toast(mensajeError(e, 'No se pudo cargar'), 'bad'); }
@@ -151,7 +151,7 @@ export async function initMisFichajes() {
   mostrarGate(); // siempre se empieza por el PIN
   try {
     const { empleados } = await api('/api/fichaje/empleados');
-    $('#mfEmpleado').innerHTML = empleados.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+    $('#mfEmpleado').innerHTML = empleados.map(e => `<option value="${e.id}">${esc(e.nombre)}</option>`).join('');
   } catch { toast('No se pudo cargar la lista', 'bad'); }
 
   if (wired) return;

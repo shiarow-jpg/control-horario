@@ -34,7 +34,14 @@ export function mensajeError(e, porDefecto = 'No se pudo completar') {
 let toastTimer;
 export function toast(msg, tipo = '') {
   let el = document.querySelector('.toast');
-  if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'toast';
+    // Para que los lectores de pantalla anuncien el resultado del fichaje.
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+  }
   el.textContent = msg;
   el.className = `toast show ${tipo}`;
   clearTimeout(toastTimer);
@@ -47,6 +54,22 @@ export const hoyLocalStr = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ
 export const inicioMesLocalStr = () => hoyLocalStr().slice(0, 8) + '01';
 export const fmtHora = (iso) => new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: TZ, hour12: false }).format(new Date(iso));
 export const fmtFecha = (f) => new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: TZ }).format(new Date(f + 'T12:00:00Z'));
+
+// Reloj protagonista del kiosko: hora grande, segundos y fecha por separado.
+export function relojHeroEn(selHora, selSeg, selFecha) {
+  const hEl = document.querySelector(selHora), sEl = document.querySelector(selSeg), fEl = document.querySelector(selFecha);
+  if (!hEl) return;
+  const fmtHM = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: TZ, hour12: false });
+  const fmtS = new Intl.DateTimeFormat('es-ES', { second: '2-digit', timeZone: TZ, hour12: false });
+  const fmtF = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ });
+  const tick = () => {
+    const ahora = new Date();
+    hEl.textContent = fmtHM.format(ahora);
+    if (sEl) sEl.textContent = fmtS.format(ahora).padStart(2, '0');
+    if (fEl) fEl.textContent = fmtF.format(ahora);
+  };
+  tick(); setInterval(tick, 1000);
+}
 
 export function relojEn(sel) {
   const el = document.querySelector(sel);

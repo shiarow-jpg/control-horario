@@ -4,8 +4,8 @@
   "description": "Control horario y registro de jornada laboral",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0b1733",
-  "theme_color": "#0b1733",
+  "background_color": "#070d1c",
+  "theme_color": "#070d1c",
   "icons": [
     { "src": "/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]

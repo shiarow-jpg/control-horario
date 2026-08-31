@@ -1,5 +1,5 @@
 // Logica de la pantalla de fichaje (kiosko) + cola offline.
-import { api, toast, mensajeError, relojEn, iniciales, ETIQUETA, ETIQUETA_ESTADO } from './common.js';
+import { api, toast, mensajeError, relojEn, relojHeroEn, iniciales, ETIQUETA, ETIQUETA_ESTADO, esc } from './common.js';
 
 const COLA_KEY = 'fichaje_cola_offline';
 const ACCIONES = [
@@ -21,6 +21,7 @@ let pin = '';
 
 const $ = (s) => document.querySelector(s);
 relojEn('#reloj');
+relojHeroEn('#relojHora', '#relojSeg', '#relojFecha');
 
 function leerCola() { try { return JSON.parse(localStorage.getItem(COLA_KEY) || '[]'); } catch { return []; } }
 function guardarCola(c) { localStorage.setItem(COLA_KEY, JSON.stringify(c)); }
@@ -60,16 +61,25 @@ async function cargar() {
 function pintarGrid() {
   const grid = $('#grid');
   grid.innerHTML = '';
-  for (const e of empleados) {
-    const div = document.createElement('div');
-    div.className = 'emp';
-    div.innerHTML = `
-      <div class="avatar">${iniciales(e.nombre)}</div>
-      <div class="nombre">${e.nombre}</div>
-      <div class="estado est-${e.estado}">${ETIQUETA_ESTADO[e.estado]}</div>`;
-    div.onclick = () => seleccionar(e);
-    grid.appendChild(div);
+  if (!empleados.length) {
+    grid.innerHTML = '<p class="muted">Todavía no hay empleados dados de alta. Ve a Administración para añadir el primero.</p>';
+    return;
   }
+  empleados.forEach((e, i) => {
+    // Botón real (no un div con onclick): así funciona con teclado, tiene
+    // foco visible y los lectores de pantalla lo anuncian como pulsable.
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'emp';
+    b.style.setProperty('--i', i); // entrada escalonada
+    b.setAttribute('aria-label', `Fichar como ${e.nombre}. Estado actual: ${ETIQUETA_ESTADO[e.estado]}`);
+    b.innerHTML = `
+      <span class="avatar" aria-hidden="true">${esc(iniciales(e.nombre))}</span>
+      <span class="nombre">${esc(e.nombre)}</span>
+      <span class="estado est-${esc(e.estado)}">${esc(ETIQUETA_ESTADO[e.estado] || e.estado)}</span>`;
+    b.onclick = () => seleccionar(e);
+    grid.appendChild(b);
+  });
 }
 
 async function seleccionar(e) {
@@ -120,13 +130,17 @@ function pintarPin() {
 function pintarPad() {
   const pad = $('#pinpad');
   pad.innerHTML = '';
-  const teclas = ['1','2','3','4','5','6','7','8','9','C','0','←'];
+  const BORRAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11v12H9l-6-6 6-6z" stroke-linejoin="round"/><path d="M17 10l-4 4M13 10l4 4" stroke-linecap="round"/></svg>';
+  const teclas = ['1','2','3','4','5','6','7','8','9','C','0','borrar'];
   for (const t of teclas) {
     const b = document.createElement('button');
-    b.textContent = t;
+    b.type = 'button';
+    if (t === 'borrar') { b.innerHTML = BORRAR; b.setAttribute('aria-label', 'Borrar último dígito'); }
+    else if (t === 'C') { b.textContent = t; b.setAttribute('aria-label', 'Borrar el PIN entero'); }
+    else b.textContent = t;
     b.onclick = () => {
       if (t === 'C') pin = '';
-      else if (t === '←') pin = pin.slice(0, -1);
+      else if (t === 'borrar') pin = pin.slice(0, -1);
       else if (pin.length < 4) pin += t;
       pintarPin(); pintarAcciones();
     };
@@ -140,6 +154,7 @@ function pintarAcciones() {
   const permitidos = PERMITIDOS[seleccionado.estado] || [];
   for (const a of ACCIONES) {
     const b = document.createElement('button');
+    b.type = 'button';
     b.className = `btn btn-${a.tipo}`;
     b.textContent = a.label;
     b.disabled = pin.length !== 4 || !permitidos.includes(a.tipo);
@@ -214,6 +229,14 @@ async function flushCola() {
 
 window.addEventListener('online', () => { pintarOffline(); flushCola().then(cargar); });
 window.addEventListener('offline', pintarOffline);
+
+// El admin acaba de autorizar este equipo: recargar el kiosko sin refrescar
+// la página (antes había que recargar a mano para que dejara de decir
+// "equipo no autorizado").
+document.addEventListener('kiosko-recargar', () => {
+  $('#sinAutorizar').classList.add('hidden');
+  cargar();
+});
 
 // Teclado fisico en la pantalla de PIN: digitos (0-9 y teclado numerico),
 // Retroceso para borrar y Enter para confirmar (solo si hay una unica accion

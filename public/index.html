@@ -4,53 +4,67 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Fichaje · Control Horario</title>
+  <meta name="description" content="Registro de jornada laboral conforme al art. 34.9 del Estatuto de los Trabajadores: fichaje por PIN, informes y registro inalterable." />
+  <meta name="theme-color" content="#070d1c" />
+  <link rel="icon" href="/img/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/img/icon.svg" />
+  <link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/geist-mono-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/css/styles.css" />
   <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#0b1733" />
 </head>
 <body>
+  <a class="skip" href="#contenido">Saltar al contenido</a>
+
   <header class="top">
     <div class="brand">
-      <div class="logo" id="brandLogo"><img src="/img/logo.png" alt="" onload="document.getElementById('brandLogo').classList.add('has-img')" onerror="var b=this.parentElement; this.remove(); if(b) b.textContent=b.dataset.initials||''"></div>
-      <div><span id="brandName">Control horario</span><small>CONTROL HORARIO</small></div>
+      <div class="logo" id="brandLogo"><img src="/img/logo.png" alt="" width="46" height="46" onload="document.getElementById('brandLogo').classList.add('has-img')" onerror="var b=this.parentElement; this.remove(); if(b) b.textContent=b.dataset.initials||''"></div>
+      <div class="texto"><span id="brandName">Control horario</span><small>Control horario</small></div>
     </div>
     <span class="clock" id="reloj"></span>
   </header>
 
-  <div class="tabs">
+  <nav class="tabs" aria-label="Secciones">
     <button class="tab active" data-tab="fichaje">Fichaje</button>
     <button class="tab" data-tab="admin">Administración<span id="tabAdminBadge" class="notif-dot hidden" role="status" aria-live="polite"></span></button>
-  </div>
+  </nav>
 
-  <main class="wrap">
+  <main class="wrap" id="contenido">
     <!-- ================= PESTAÑA FICHAJE ================= -->
     <section id="tab-fichaje" class="tabpane active">
       <div id="sinAutorizar" class="card pad hidden center">
         <h1>Equipo no autorizado</h1>
-        <p class="sub">Este ordenador todavía no puede fichar. Ve a la pestaña <b>Administración</b> y autoriza este equipo (una sola vez).</p>
+        <p class="sub" style="margin-inline:auto">Este ordenador todavía no puede fichar. Ve a la pestaña <b>Administración</b> y autoriza este equipo (una sola vez).</p>
       </div>
 
       <div id="vistaEmpleados" class="card pad hidden">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-          <h1 style="margin:0">¿Quién ficha?</h1>
+        <div class="hora-hero">
+          <div>
+            <p class="hora-grande"><span id="relojHora">--:--</span><span class="seg" id="relojSeg">00</span></p>
+            <p class="hora-fecha" id="relojFecha"></p>
+          </div>
           <button class="btn btn-ghost btn-sm" id="btnMisFichajes">Mis fichajes</button>
         </div>
+        <h1 class="titulo-fichar">¿Quién ficha?</h1>
         <p class="sub">Toca tu nombre para fichar entrada, salida o almuerzo.</p>
-        <div id="offlineBanner" class="banner hidden">Sin conexión: los fichajes se guardan y se enviarán al recuperar internet. <span id="colaCount"></span></div>
+        <div id="offlineBanner" class="banner hidden" role="status">Sin conexión: los fichajes se guardan y se enviarán al recuperar internet. <span id="colaCount"></span></div>
         <div class="empleados" id="grid"></div>
       </div>
 
       <div id="vistaFichar" class="card pad hidden">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <h1 id="empNombre" style="margin:0"></h1>
-          <button class="btn btn-ghost btn-sm" id="volver">← Cambiar</button>
+        <div class="cabecera-seccion">
+          <h1 id="empNombre"></h1>
+          <button class="btn btn-ghost btn-sm" id="volver">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Cambiar
+          </button>
         </div>
         <p class="sub" id="empEstado"></p>
 
         <!-- Entrada de PIN normal -->
         <div id="pinNormal">
-          <div class="pindots" id="dots"></div>
-          <p class="center muted" style="margin-top:-8px">Introduce tu PIN de 4 dígitos</p>
+          <div class="pindots" id="dots" role="img" aria-label="Dígitos introducidos del PIN"></div>
+          <p class="center muted pin-hint">Introduce tu PIN de 4 dígitos</p>
           <div class="pinpad" id="pinpad"></div>
           <div class="acciones mt" id="acciones"></div>
         </div>
@@ -59,8 +73,8 @@
         <div id="crearPin" class="hidden">
           <div class="banner">Es tu primera vez. Crea tu PIN de 4 dígitos: será personal y secreto (ni el administrador lo sabrá).</div>
           <div class="row">
-            <div><label>Nuevo PIN</label><input id="cpPin" type="password" inputmode="numeric" maxlength="4" placeholder="4 dígitos" /></div>
-            <div><label>Repite el PIN</label><input id="cpPin2" type="password" inputmode="numeric" maxlength="4" placeholder="repite" /></div>
+            <div><label for="cpPin">Nuevo PIN</label><input id="cpPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 dígitos" /></div>
+            <div><label for="cpPin2">Repite el PIN</label><input id="cpPin2" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Repite" /></div>
           </div>
           <button class="btn btn-primary btn-sm mt" id="cpGuardar">Crear mi PIN</button>
         </div>
@@ -68,17 +82,20 @@
 
       <!-- Subvista: el empleado consulta SUS fichajes con su PIN -->
       <div id="vistaMisFichajes" class="card pad hidden">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <h1 style="margin:0">Mi cuenta</h1>
-          <button class="btn btn-ghost btn-sm" id="mfVolver">← Volver</button>
+        <div class="cabecera-seccion">
+          <h1>Mi cuenta</h1>
+          <button class="btn btn-ghost btn-sm" id="mfVolver">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Volver
+          </button>
         </div>
         <!-- Identificación: primero el PIN -->
         <div id="mfAuth">
           <p class="sub">Identifícate con tu PIN para ver tus fichajes y gestionar tus solicitudes.</p>
           <div class="row">
-            <div><label>Empleado/a</label><select id="mfEmpleado"></select></div>
-            <div><label>PIN</label><input id="mfPin" type="password" inputmode="numeric" maxlength="4" placeholder="4 dígitos" /></div>
-            <div style="flex:0"><button class="btn btn-primary btn-sm" id="mfEntrar" style="margin-top:24px">Entrar</button></div>
+            <div><label for="mfEmpleado">Empleado/a</label><select id="mfEmpleado"></select></div>
+            <div><label for="mfPin">PIN</label><input id="mfPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 dígitos" /></div>
+            <div class="accion"><button class="btn btn-primary btn-sm" id="mfEntrar">Entrar</button></div>
           </div>
         </div>
 
@@ -86,7 +103,7 @@
         <div id="mfContenido" class="hidden">
         <p class="sub"><b id="mfQuien"></b> · <a href="#" id="mfSalir">Cambiar de empleado</a></p>
 
-        <div class="subtabs mt">
+        <div class="subtabs">
           <button class="subtab active" data-ss="fichajes">Mis fichajes</button>
           <button class="subtab" data-ss="correccion">Pedir corrección</button>
           <button class="subtab" data-ss="ausencia">Pedir ausencia</button>
@@ -97,38 +114,38 @@
         <!-- Mis fichajes -->
         <div id="ss-fichajes" class="ss-pane">
           <div class="row">
-            <div><label>Desde</label><input id="mfDesde" type="date" /></div>
-            <div><label>Hasta</label><input id="mfHasta" type="date" /></div>
-            <div style="flex:0"><button class="btn btn-primary btn-sm" id="mfConsultar" style="margin-top:24px">Consultar</button></div>
-            <div style="flex:0"><button class="btn btn-ghost btn-sm" id="mfPdf" style="margin-top:24px">PDF</button></div>
+            <div><label for="mfDesde">Desde</label><input id="mfDesde" type="date" /></div>
+            <div><label for="mfHasta">Hasta</label><input id="mfHasta" type="date" /></div>
+            <div class="accion"><button class="btn btn-primary btn-sm" id="mfConsultar">Consultar</button></div>
+            <div class="accion"><button class="btn btn-ghost btn-sm" id="mfPdf">PDF</button></div>
           </div>
-          <div id="mfResultado" class="mt"></div>
+          <div id="mfResultado" class="mt tabla-scroll"></div>
         </div>
 
         <!-- Pedir corrección -->
         <div id="ss-correccion" class="ss-pane hidden">
           <p class="sub">Pide corregir un fichaje (un olvido o un marcaje erróneo). El administrador lo aprobará.</p>
           <div class="row">
-            <div><label>Tipo de corrección</label>
+            <div><label for="corrAccion">Tipo de corrección</label>
               <select id="corrAccion">
                 <option value="anadir">Añadir un fichaje que olvidé</option>
                 <option value="anular">Anular un fichaje erróneo</option>
               </select></div>
           </div>
-          <div id="corrAnadir" class="row">
-            <div><label>Qué fichaje</label>
+          <div id="corrAnadir" class="row mt">
+            <div><label for="corrTipo">Qué fichaje</label>
               <select id="corrTipo">
                 <option value="entrada">Entrada</option><option value="salida">Salida</option>
                 <option value="inicio_pausa">Inicio almuerzo</option><option value="fin_pausa">Fin almuerzo</option>
               </select></div>
-            <div><label>Fecha y hora correctas</label><input id="corrTs" type="datetime-local" /></div>
+            <div><label for="corrTs">Fecha y hora correctas</label><input id="corrTs" type="datetime-local" /></div>
           </div>
-          <div id="corrAnular" class="hidden">
-            <label>Marcaje a anular</label>
+          <div id="corrAnular" class="hidden mt">
+            <label for="corrRef">Marcaje a anular</label>
             <select id="corrRef"><option value="">— carga tus fichajes recientes —</option></select>
             <button class="btn btn-ghost btn-sm mt" id="corrCargar">Cargar mis fichajes recientes</button>
           </div>
-          <label>Motivo</label><input id="corrMotivo" placeholder="Ej: olvidé fichar la salida" />
+          <div class="mt"><label for="corrMotivo">Motivo</label><input id="corrMotivo" placeholder="Ej: olvidé fichar la salida" /></div>
           <button class="btn btn-primary btn-sm mt" id="corrEnviar">Enviar solicitud</button>
         </div>
 
@@ -137,7 +154,7 @@
           <p class="sub">Solicita vacaciones o una ausencia. El administrador la aprobará o denegará.</p>
           <div id="ausSaldo" class="banner hidden"></div>
           <div class="row">
-            <div><label>Tipo</label>
+            <div><label for="ausTipo">Tipo</label>
               <select id="ausTipo">
                 <option value="vacaciones">Vacaciones</option>
                 <option value="permiso_retribuido">Permiso retribuido</option>
@@ -146,7 +163,7 @@
                 <option value="baja">Baja médica (IT)</option>
                 <option value="otro">Otro</option>
               </select></div>
-            <div id="ausSubWrap" class="hidden"><label>Detalle del permiso</label>
+            <div id="ausSubWrap" class="hidden"><label for="ausSub">Detalle del permiso</label>
               <select id="ausSub">
                 <option value="matrimonio">Matrimonio / pareja de hecho</option>
                 <option value="fallecimiento_familiar">Fallecimiento de familiar</option>
@@ -160,28 +177,28 @@
                 <option value="otro">Otro</option>
               </select></div>
           </div>
-          <div class="row">
-            <div><label>Desde</label><input id="ausDesde" type="date" /></div>
-            <div><label>Hasta</label><input id="ausHasta" type="date" /></div>
-            <div><label>Horas (opcional)</label><input id="ausHoras" placeholder="ej: 9:00-13:00" /></div>
+          <div class="row mt">
+            <div><label for="ausDesde">Desde</label><input id="ausDesde" type="date" /></div>
+            <div><label for="ausHasta">Hasta</label><input id="ausHasta" type="date" /></div>
+            <div><label for="ausHoras">Horas (opcional)</label><input id="ausHoras" placeholder="Ej: 9:00-13:00" /></div>
           </div>
-          <label>Motivo / detalle</label><input id="ausMotivo" placeholder="Opcional (obligatorio si es «Otro»)" />
+          <div class="mt"><label for="ausMotivo">Motivo / detalle</label><input id="ausMotivo" placeholder="Opcional (obligatorio si es «Otro»)" /></div>
           <button class="btn btn-primary btn-sm mt" id="ausEnviar">Enviar solicitud</button>
         </div>
 
         <!-- Mis solicitudes -->
         <div id="ss-solicitudes" class="ss-pane hidden">
           <button class="btn btn-ghost btn-sm" id="ssRefrescar">Ver mis solicitudes</button>
-          <div id="ssLista" class="mt"></div>
+          <div id="ssLista" class="mt tabla-scroll"></div>
         </div>
 
         <!-- Cambiar PIN -->
         <div id="ss-pin" class="ss-pane hidden">
           <p class="sub">Cambia tu PIN. Necesitas tu PIN actual.</p>
           <div class="row">
-            <div><label>PIN actual</label><input id="cpaActual" type="password" inputmode="numeric" maxlength="4" placeholder="actual" /></div>
-            <div><label>Nuevo PIN</label><input id="cpaNuevo" type="password" inputmode="numeric" maxlength="4" placeholder="nuevo" /></div>
-            <div><label>Repite el nuevo</label><input id="cpaNuevo2" type="password" inputmode="numeric" maxlength="4" placeholder="repite" /></div>
+            <div><label for="cpaActual">PIN actual</label><input id="cpaActual" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Actual" /></div>
+            <div><label for="cpaNuevo">Nuevo PIN</label><input id="cpaNuevo" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Nuevo" /></div>
+            <div><label for="cpaNuevo2">Repite el nuevo</label><input id="cpaNuevo2" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Repite" /></div>
           </div>
           <button class="btn btn-primary btn-sm mt" id="cpaGuardar">Cambiar PIN</button>
         </div>
@@ -191,106 +208,114 @@
 
     <!-- ================= PESTAÑA ADMINISTRACIÓN ================= -->
     <section id="tab-admin" class="tabpane">
-      <div id="vistaSetup" class="card pad hidden" style="max-width:440px;margin:0 auto">
+      <form id="vistaSetup" class="card pad hidden" style="max-width:460px;margin:0 auto">
         <h1>Configurar administrador</h1>
         <p class="sub">Crea la contraseña de administrador. Será necesaria para gestionar empleados, autorizar equipos y exportar informes.</p>
-        <label>Contraseña (mín. 6 caracteres)</label>
-        <input id="setupPass" type="password" />
-        <label>Repetir contraseña</label>
-        <input id="setupPass2" type="password" />
-        <button class="btn btn-primary btn-sm mt" id="btnSetup">Crear administrador</button>
-      </div>
+        <input type="text" name="usuario" value="administrador" autocomplete="username" hidden readonly aria-hidden="true" tabindex="-1" />
+        <label for="setupPass">Contraseña (mín. 6 caracteres)</label>
+        <input id="setupPass" type="password" autocomplete="new-password" />
+        <div class="mt"><label for="setupPass2">Repetir contraseña</label>
+        <input id="setupPass2" type="password" autocomplete="new-password" /></div>
+        <button class="btn btn-primary btn-sm mt" id="btnSetup" type="submit">Crear administrador</button>
+      </form>
 
-      <div id="vistaLogin" class="card pad hidden" style="max-width:440px;margin:0 auto">
+      <form id="vistaLogin" class="card pad hidden" style="max-width:460px;margin:0 auto">
         <h1>Administración</h1>
         <p class="sub">Introduce la contraseña de administrador.</p>
-        <label>Contraseña</label>
-        <input id="loginPass" type="password" />
-        <button class="btn btn-primary btn-sm mt" id="btnLogin">Entrar</button>
-      </div>
+        <input type="text" name="usuario" value="administrador" autocomplete="username" hidden readonly aria-hidden="true" tabindex="-1" />
+        <label for="loginPass">Contraseña</label>
+        <input id="loginPass" type="password" autocomplete="current-password" />
+        <button class="btn btn-primary btn-sm mt" id="btnLogin" type="submit">Entrar</button>
+      </form>
 
       <div id="vistaPanel" class="hidden">
         <div class="card pad mb">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <h2 style="margin:0">Equipos autorizados</h2>
+          <div class="cabecera-seccion">
+            <h2>Equipos autorizados</h2>
             <button class="btn btn-ghost btn-sm" id="logout">Cerrar sesión</button>
           </div>
           <p class="sub">Solo los equipos autorizados pueden fichar. Autoriza este ordenador una vez; los móviles no podrán fichar.</p>
           <div class="row">
-            <div><label>Nombre de este equipo</label><input id="dispNombre" placeholder="Ej: PC Mostrador 1" /></div>
-            <div style="flex:0"><button class="btn btn-primary btn-sm" id="btnAutorizar" style="margin-top:24px">Autorizar este equipo</button></div>
+            <div><label for="dispNombre">Nombre de este equipo</label><input id="dispNombre" placeholder="Ej: PC Mostrador 1" /></div>
+            <div class="accion"><button class="btn btn-primary btn-sm" id="btnAutorizar">Autorizar este equipo</button></div>
           </div>
-          <div id="listaDisp" class="mt"></div>
+          <div id="listaDisp" class="mt tabla-scroll"></div>
         </div>
 
         <div class="card pad mb">
           <h2>Empleados</h2>
           <p class="sub">Da de alta a cada empleado con su nombre. El PIN es personal: lo establece cada empleado en su primer fichaje.</p>
           <div class="row">
-            <div><label>Nombre</label><input id="admNombre" placeholder="Nombre y apellido" /></div>
-            <div><label>Jornada</label><select id="empRegimen"><option value="completa">Completa</option><option value="parcial">Parcial</option></select></div>
-            <div><label>Vacaciones (días/año)</label><input id="admDiasVac" type="number" min="0" value="22" /></div>
-            <div><label>Asuntos propios (días/año)</label><input id="admDiasAsu" type="number" min="0" value="0" /></div>
-            <div style="flex:0"><button class="btn btn-primary btn-sm" id="btnAltaEmp" style="margin-top:24px">Alta</button></div>
+            <div><label for="admNombre">Nombre</label><input id="admNombre" placeholder="Nombre y apellido" /></div>
+            <div><label for="empRegimen">Jornada</label><select id="empRegimen"><option value="completa">Completa</option><option value="parcial">Parcial</option></select></div>
+            <div><label for="admDiasVac">Vacaciones (días/año)</label><input id="admDiasVac" type="number" min="0" value="22" /></div>
+            <div><label for="admDiasAsu">Asuntos propios (días/año)</label><input id="admDiasAsu" type="number" min="0" value="0" /></div>
+            <div class="accion"><button class="btn btn-primary btn-sm" id="btnAltaEmp">Alta</button></div>
           </div>
-          <div id="listaEmp" class="mt"></div>
+          <div id="listaEmp" class="mt tabla-scroll"></div>
           <details class="mt">
-            <summary class="muted" style="cursor:pointer">Empleados dados de baja (registro conservado)</summary>
-            <p class="sub mt">Ya no aparecen en la pantalla de fichaje, pero su registro se conserva y se puede consultar en "Informes y registro" por si lo solicitan tras dejar la empresa.</p>
-            <div id="listaBaja"></div>
+            <summary>Empleados dados de baja (registro conservado)</summary>
+            <div>
+              <p class="sub">Ya no aparecen en la pantalla de fichaje, pero su registro se conserva y se puede consultar en «Informes y registro» por si lo solicitan tras dejar la empresa.</p>
+              <div id="listaBaja" class="tabla-scroll"></div>
+            </div>
           </details>
         </div>
 
         <div class="card pad mb">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <h2 style="margin:0">Avisos <span id="avisosBadge" class="estado-pill est-pendiente hidden"></span></h2>
+          <div class="cabecera-seccion">
+            <h2>Avisos <span id="avisosBadge" class="estado-pill est-pendiente hidden"></span></h2>
             <button class="btn btn-ghost btn-sm" id="btnAvisosVistos">Marcar como vistos</button>
           </div>
           <p class="sub">Notificaciones automáticas: jornadas con más horas de la cuenta y cierres automáticos por olvido de salida.</p>
-          <div id="listaAvisos"></div>
+          <div id="listaAvisos" class="tabla-scroll"></div>
         </div>
 
         <div class="card pad mb">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <h2 style="margin:0">Solicitudes <span id="solicBadge" class="estado-pill est-pendiente hidden"></span></h2>
-            <select id="solicFiltro" style="width:auto">
-              <option value="pendiente">Pendientes</option>
-              <option value="todas">Todas</option>
-            </select>
+          <div class="cabecera-seccion">
+            <h2>Solicitudes <span id="solicBadge" class="estado-pill est-pendiente hidden"></span></h2>
+            <div style="max-width:200px">
+              <label for="solicFiltro" class="hidden">Filtro de solicitudes</label>
+              <select id="solicFiltro">
+                <option value="pendiente">Pendientes</option>
+                <option value="todas">Todas</option>
+              </select>
+            </div>
           </div>
           <p class="sub">Correcciones de fichaje y ausencias solicitadas por los empleados. Revísalas para aprobarlas o denegarlas.</p>
-          <div id="listaSolic"></div>
+          <div id="listaSolic" class="tabla-scroll"></div>
         </div>
 
         <div class="card pad mb">
           <h2>Informes y registro</h2>
-          <div class="row">
-            <div><label>Empleado/a</label><select id="infEmpleado"></select></div>
-            <div><label>Desde</label><input id="infDesde" type="date" /></div>
-            <div><label>Hasta</label><input id="infHasta" type="date" /></div>
-            <div style="flex:0"><button class="btn btn-primary btn-sm" id="btnInforme" style="margin-top:24px">Ver</button></div>
-            <div style="flex:0"><button class="btn btn-ghost btn-sm" id="btnPdf" style="margin-top:24px">PDF</button></div>
+          <div class="row mt">
+            <div><label for="infEmpleado">Empleado/a</label><select id="infEmpleado"></select></div>
+            <div><label for="infDesde">Desde</label><input id="infDesde" type="date" /></div>
+            <div><label for="infHasta">Hasta</label><input id="infHasta" type="date" /></div>
+            <div class="accion"><button class="btn btn-primary btn-sm" id="btnInforme">Ver</button></div>
+            <div class="accion"><button class="btn btn-ghost btn-sm" id="btnPdf">PDF</button></div>
           </div>
-          <div id="infResultado" class="mt"></div>
+          <div id="infResultado" class="mt tabla-scroll"></div>
           <details class="mt">
-            <summary class="muted" style="cursor:pointer">Auditoría (registro completo de eventos)</summary>
-            <div class="mt">
+            <summary>Auditoría (registro completo de eventos)</summary>
+            <div>
               <p class="sub">Todo queda registrado: marcajes, correcciones (con motivo, quién la pidió y quién la aprobó) y ausencias. Nada se borra.</p>
-              <div id="listaEventos"></div>
+              <div id="listaEventos" class="tabla-scroll"></div>
             </div>
           </details>
         </div>
 
         <div class="card pad mb">
           <h2>Integridad y seguridad</h2>
+          <p class="sub">Comprueba que el registro no ha sido alterado: cada fichaje va encadenado al anterior con una huella digital.</p>
           <button class="btn btn-ghost btn-sm" id="btnIntegridad">Verificar integridad del registro</button>
-          <span id="integridadRes" class="mt" style="margin-left:12px"></span>
+          <span id="integridadRes" style="margin-left:12px"></span>
           <details class="mt">
-            <summary class="muted" style="cursor:pointer">Cambiar contraseña de administrador</summary>
-            <div class="row mt">
-              <div><label>Actual</label><input id="passActual" type="password" /></div>
-              <div><label>Nueva</label><input id="passNueva" type="password" /></div>
-              <div style="flex:0"><button class="btn btn-ghost btn-sm" id="btnPass" style="margin-top:24px">Cambiar</button></div>
+            <summary>Cambiar contraseña de administrador</summary>
+            <div class="row">
+              <div><label for="passActual">Actual</label><input id="passActual" type="password" autocomplete="current-password" /></div>
+              <div><label for="passNueva">Nueva</label><input id="passNueva" type="password" autocomplete="new-password" /></div>
+              <div class="accion"><button class="btn btn-ghost btn-sm" id="btnPass">Cambiar</button></div>
             </div>
           </details>
         </div>

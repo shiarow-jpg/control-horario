@@ -39,7 +39,10 @@ function abrirPanel() {
 const refrescarBadgeTab = () => document.dispatchEvent(new CustomEvent('notifs-refresh'));
 
 // ---- Setup / login ----
-$('#btnSetup').onclick = async () => {
+// Son <form> para que el navegador y los gestores de contraseñas los traten
+// como tales (y Enter funcione solo); interceptamos el envío.
+$('#vistaSetup').addEventListener('submit', async (e) => {
+  e.preventDefault();
   const p = $('#setupPass').value, p2 = $('#setupPass2').value;
   if (p.length < 6) return toast('Mínimo 6 caracteres', 'bad');
   if (p !== p2) return toast('Las contraseñas no coinciden', 'bad');
@@ -48,24 +51,22 @@ $('#btnSetup').onclick = async () => {
     await api('/api/admin/login', { method: 'POST', body: { password: p } });
     toast('Administrador creado ✓', 'ok'); abrirPanel();
   } catch { toast('No se pudo configurar', 'bad'); }
-};
+});
 
-$('#btnLogin').onclick = async () => {
+$('#vistaLogin').addEventListener('submit', async (e) => {
+  e.preventDefault();
   try {
     await api('/api/admin/login', { method: 'POST', body: { password: $('#loginPass').value } });
     abrirPanel();
-  } catch (e) { toast(mensajeError(e, 'Contraseña incorrecta'), 'bad'); }
-};
+  } catch (err) { toast(mensajeError(err, 'Contraseña incorrecta'), 'bad'); }
+});
 
 $('#logout').onclick = async () => {
   try { await api('/api/admin/logout', { method: 'POST' }); } catch {}
   soloLogin();
 };
 
-// Enter para enviar la contraseña.
-$('#loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btnLogin').click(); });
-$('#setupPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('#setupPass2').focus(); });
-$('#setupPass2').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btnSetup').click(); });
+// Enter en el cambio de contraseña (no está dentro de un formulario).
 $('#passNueva').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btnPass').click(); });
 
 // ---- Dispositivos ----
@@ -74,6 +75,9 @@ $('#btnAutorizar').onclick = async () => {
   try {
     await api('/api/admin/autorizar-dispositivo', { method: 'POST', body: { nombre } });
     toast('Equipo autorizado ✓ Ya puede fichar', 'ok'); $('#dispNombre').value = ''; cargarDispositivos();
+    // El kiosko estaba mostrando "equipo no autorizado": que se entere ya,
+    // sin obligar a recargar la página.
+    document.dispatchEvent(new CustomEvent('kiosko-recargar'));
   } catch { toast('No se pudo autorizar', 'bad'); }
 };
 
@@ -82,8 +86,8 @@ async function cargarDispositivos() {
   if (!dispositivos.length) { $('#listaDisp').innerHTML = '<p class="muted">Ningún equipo autorizado todavía.</p>'; return; }
   let h = '<table><thead><tr><th>Equipo</th><th>IP</th><th>Estado</th><th></th></tr></thead><tbody>';
   for (const d of dispositivos) {
-    h += `<tr><td>${d.nombre}</td><td class="muted">${d.ip || '—'}</td>
-      <td>${d.activo ? '<span class="pill" style="background:rgba(46,204,113,.15);color:#2ecc71">Activo</span>' : '<span class="pill tag-anulado">Revocado</span>'}</td>
+    h += `<tr><td>${esc(d.nombre)}</td><td class="muted">${esc(d.ip || '—')}</td>
+      <td>${d.activo ? '<span class="pill est-aprobada">Activo</span>' : '<span class="pill tag-anulado">Revocado</span>'}</td>
       <td>${d.activo ? `<button class="btn btn-ghost btn-sm" data-rev="${d.id}">Revocar</button>` : ''}</td></tr>`;
   }
   h += '</tbody></table>';
@@ -114,7 +118,7 @@ async function cargarEmpleados() {
   // Selector de informes: TODOS (incluidos los de baja) para poder consultar el
   // registro de quien ya no está en la empresa.
   $('#infEmpleado').innerHTML = empleados
-    .map(e => `<option value="${e.id}">${e.nombre}${e.activo ? '' : ' (baja)'}</option>`).join('');
+    .map(e => `<option value="${e.id}">${esc(e.nombre)}${e.activo ? '' : ' (baja)'}</option>`).join('');
 
   // Lista de empleados activos (los únicos que aparecen también en fichaje).
   if (!activos.length) {
@@ -123,7 +127,7 @@ async function cargarEmpleados() {
     let h = '<table><thead><tr><th>Nombre</th><th>Jornada</th><th>Estado</th><th>PIN</th><th>Vac./Asuntos</th><th>Acciones</th></tr></thead><tbody>';
     for (const e of activos) {
       const pinEstado = e.pin_configurado ? 'Configurado' : '<span class="estado-pill est-pendiente">Sin configurar</span>';
-      h += `<tr><td><b>${e.nombre}</b></td><td class="muted">${e.regimen}</td><td>${e.estado}</td><td>${pinEstado}</td>
+      h += `<tr><td><b>${esc(e.nombre)}</b></td><td class="muted">${esc(e.regimen)}</td><td>${esc(e.estado)}</td><td>${pinEstado}</td>
         <td class="muted">${e.dias_vacaciones ?? 22} / ${e.dias_asuntos ?? 0} días</td>
         <td>
           <button class="btn btn-ghost btn-sm" data-dias="${e.id}">Editar días</button>
@@ -140,7 +144,7 @@ async function cargarEmpleados() {
   } else {
     let h = '<table><thead><tr><th>Nombre</th><th>Jornada</th><th>Acciones</th></tr></thead><tbody>';
     for (const e of baja) {
-      h += `<tr><td>${e.nombre}</td><td class="muted">${e.regimen}</td>
+      h += `<tr><td>${esc(e.nombre)}</td><td class="muted">${esc(e.regimen)}</td>
         <td><button class="btn btn-ghost btn-sm" data-act="${e.id}" data-val="1">Reactivar</button></td></tr>`;
     }
     $('#listaBaja').innerHTML = h + '</tbody></table>';
@@ -197,13 +201,13 @@ async function cargarInforme() {
   if (r.correcciones?.length) {
     h += '<h2 class="mt">Correcciones y modificaciones</h2><table><thead><tr><th>Acción</th><th>Marcaje</th><th>Motivo</th></tr></thead><tbody>';
     for (const c of r.correcciones)
-      h += `<tr><td>${c.accion === 'anulado' ? '<span class="tag-anulado">Anulado</span>' : 'Añadido'}</td><td>${fmtFecha(c.ts.slice(0, 10))} ${fmtHora(c.ts)} · ${ETIQUETA[c.tipo] || c.tipo}</td><td class="muted">${c.motivo || ''}</td></tr>`;
+      h += `<tr><td>${c.accion === 'anulado' ? '<span class="pill tag-anulado">Anulado</span>' : 'Añadido'}</td><td>${fmtFecha(c.ts.slice(0, 10))} ${fmtHora(c.ts)} · ${esc(ETIQUETA[c.tipo] || c.tipo)}</td><td class="muted">${esc(c.motivo || '')}</td></tr>`;
     h += '</tbody></table>';
   }
   // Ausencias aprobadas.
   if (r.ausencias?.length) {
     h += '<h2 class="mt">Ausencias aprobadas</h2><ul>';
-    for (const a of r.ausencias) h += `<li class="muted">${a.motivo || ''}</li>`;
+    for (const a of r.ausencias) h += `<li class="muted">${esc(a.motivo || '')}</li>`;
     h += '</ul>';
   }
   $('#infResultado').innerHTML = h;
@@ -258,12 +262,12 @@ async function cargarSolicitudes() {
   let h = '<table><thead><tr><th>Empleado</th><th>Tipo</th><th>Detalle</th><th>Motivo</th><th>Estado</th><th></th></tr></thead><tbody>';
   for (const s of solicitudes) {
     const acc = s.estado === 'pendiente'
-      ? `<button class="btn btn-sm" style="background:#1f9d57;color:#fff" data-ap="${s.id}">Aprobar</button>
-         <button class="btn btn-sm" style="background:#c0392b;color:#fff" data-de="${s.id}">Denegar</button>`
-      : `<span class="muted">${s.nota_admin || ''}</span>`;
-    h += `<tr><td><b>${s.empleado}</b></td><td>${s.clase === 'correccion' ? 'Corrección' : 'Ausencia'}</td>
-      <td>${s.detalle}</td><td class="muted">${s.motivo || ''}</td>
-      <td><span class="estado-pill est-${s.estado}">${s.estado}</span></td><td>${acc}</td></tr>`;
+      ? `<button class="btn btn-aprobar btn-sm" data-ap="${s.id}">Aprobar</button>
+         <button class="btn btn-denegar btn-sm" data-de="${s.id}">Denegar</button>`
+      : `<span class="muted">${esc(s.nota_admin || '')}</span>`;
+    h += `<tr><td><b>${esc(s.empleado)}</b></td><td>${s.clase === 'correccion' ? 'Corrección' : 'Ausencia'}</td>
+      <td>${esc(s.detalle)}</td><td class="muted">${esc(s.motivo || '')}</td>
+      <td><span class="estado-pill est-${esc(s.estado)}">${esc(s.estado)}</span></td><td>${acc}</td></tr>`;
   }
   $('#listaSolic').innerHTML = h + '</tbody></table>';
   $('#listaSolic').querySelectorAll('[data-ap]').forEach(b => b.onclick = () => resolver(b.dataset.ap, 'aprobar'));
@@ -288,7 +292,7 @@ async function cargarEventos(empleadoId) {
     const anulado = anulados.has(e.id);
     h += `<tr><td>${fmtFecha(e.ts_efectivo.slice(0, 10))} ${fmtHora(e.ts_efectivo)}</td>
       <td class="${anulado ? 'tag-anulado' : ''}">${e.etiqueta}${e.tipo === 'anulacion' && e.ref_evento_id ? ` (#${e.ref_evento_id})` : ''}</td>
-      <td>${e.origen}</td><td>${e.autor}</td><td class="muted">${e.motivo || ''}</td></tr>`;
+      <td>${esc(e.origen)}</td><td>${esc(e.autor)}</td><td class="muted">${esc(e.motivo || '')}</td></tr>`;
   }
   $('#listaEventos').innerHTML = h + '</tbody></table>';
 }
@@ -297,8 +301,8 @@ async function cargarEventos(empleadoId) {
 $('#btnIntegridad').onclick = async () => {
   const r = await api('/api/admin/integridad');
   $('#integridadRes').innerHTML = r.ok
-    ? `<span class="pill" style="background:rgba(46,204,113,.15);color:#2ecc71">Cadena intacta (${r.total} eventos)</span>`
-    : `<span class="pill tag-anulado">ALTERADA en seq ${r.roto_en}: ${r.motivo}</span>`;
+    ? `<span class="pill est-aprobada">Cadena intacta · ${Number(r.total)} eventos</span>`
+    : `<span class="pill est-denegada">Alterada en el evento ${Number(r.roto_en)}: ${esc(r.motivo)}</span>`;
 };
 async function cargarIntegridadSilenciosa() { try { await $('#btnIntegridad').onclick(); } catch {} }
 

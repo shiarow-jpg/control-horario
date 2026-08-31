@@ -1,168 +1,601 @@
+/* =====================================================================
+   Control Horario — sistema visual
+   Tipografía autoalojada (Geist), sin peticiones externas: el kiosko
+   debe funcionar sin conexión.
+   ===================================================================== */
+
+@font-face {
+  font-family: 'Geist'; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url('/fonts/geist-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+                 U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Geist'; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url('/fonts/geist-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+                 U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+                 U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Geist Mono'; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url('/fonts/geist-mono-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD;
+}
+
+/* =====================================================================
+   TOKENS
+   Para adaptar la app a otra empresa (white-label) basta con cambiar el
+   bloque MARCA: el resto del sistema se recalcula a partir de ahí.
+   ===================================================================== */
 :root {
-  /* Tema de marca Multiverso Norte: azul marino + naranja (logo del pato) */
-  --bg: #0b1733;
-  --bg-2: #102146;
-  --card: #142654;
-  --card-2: #1b3164;
-  --line: #294079;
-  --txt: #eaf0fb;
-  --txt-dim: #9db0d6;
-  --accent: #f5a01f;
-  --accent-2: #ff7b1c;
-  --ok: #2ecc71;
-  --warn: #f1c40f;
-  --bad: #e74c3c;
-  --radius: 16px;
-  --shadow: 0 10px 30px rgba(0,0,0,.4);
+  /* ---- MARCA (Multiverso Norte: azul marino + ámbar del pato) ---- */
+  --accent:         #e6a637;
+  --accent-hi:      #f4bd60;
+  --accent-ink:     #21160a;
+  --accent-rgb:     230, 166, 55;
+
+  /* ---- Superficies (familia azul marino, una sola gama de grises) ---- */
+  --canvas:         #070d1c;
+  --surface-1:      #0c1529;
+  --surface-2:      #111d38;
+  --surface-3:      #17264a;
+  --hairline:       #1d2b4e;
+  --hairline-hi:    #2b3d69;
+
+  /* ---- Texto ---- */
+  --ink:            #eef2fb;
+  --ink-muted:      #a9b7d6;
+  --ink-subtle:     #7285ab;
+
+  /* ---- Semánticos (saturación contenida, misma familia de luz) ---- */
+  --ok:             #3fb27a;
+  --ok-rgb:         63, 178, 122;
+  --pause:          #d9a441;
+  --pause-rgb:      217, 164, 65;
+  --bad:            #d9584e;
+  --bad-rgb:        217, 88, 78;
+  --info:           #4a8fd4;
+  --info-rgb:       74, 143, 212;
+
+  /* ---- Radios: más cerrados por dentro, más suaves por fuera ---- */
+  --r-xs: 8px; --r-sm: 11px; --r-md: 15px; --r-lg: 20px; --r-xl: 26px; --r-pill: 999px;
+
+  /* ---- Sombras tintadas con el azul del fondo (nunca negro puro) ---- */
+  --shadow-sm: 0 1px 2px rgba(3, 7, 18, .5);
+  --shadow-md: 0 10px 28px -12px rgba(3, 7, 18, .75);
+  --shadow-lg: 0 30px 70px -28px rgba(3, 7, 18, .9);
+  --edge: inset 0 1px 0 rgba(255, 255, 255, .045);
+
+  /* ---- Espaciado y movimiento ---- */
+  --gutter: clamp(16px, 3vw, 28px);
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --dur: 220ms;
+
+  /* ---- Capas ---- */
+  --z-grain: 1; --z-header: 20; --z-toast: 50;
+
+  color-scheme: dark;
 }
 
-* { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
+/* =====================================================================
+   BASE
+   ===================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: radial-gradient(1200px 600px at 50% -10%, #1b376f 0%, var(--bg) 60%);
-  color: var(--txt);
-  min-height: 100%;
+  margin: 0;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
 }
 
-.wrap { max-width: 1000px; margin: 0 auto; padding: 20px; }
+/* Luz ambiente: dos focos suaves, uno cálido de marca y otro frío.
+   Rompe el plano y da profundidad sin cargar la pantalla. */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(1100px 520px at 78% -12%, rgba(var(--accent-rgb), .10), transparent 60%),
+    radial-gradient(900px 600px at 12% -8%, rgba(70, 120, 220, .14), transparent 62%),
+    linear-gradient(180deg, #0d1730 0%, var(--canvas) 55%);
+}
 
+/* Grano fino: evita el aspecto "vector plano" de las UIs generadas. */
+body::after {
+  content: ''; position: fixed; inset: 0; z-index: var(--z-grain); pointer-events: none;
+  opacity: .04; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+body > * { position: relative; z-index: 2; }
+
+::selection { background: rgba(var(--accent-rgb), .3); color: #fff; }
+
+/* Barra de desplazamiento discreta, en la gama del tema */
+* { scrollbar-width: thin; scrollbar-color: var(--hairline-hi) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--hairline-hi); border-radius: var(--r-pill); border: 3px solid var(--canvas); }
+
+/* Foco visible y coherente en todo lo interactivo (requisito de accesibilidad) */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--r-xs);
+}
+
+button, input, select, textarea { font: inherit; }
+button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+/* Enlace de salto para teclado */
+.skip {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: var(--accent); color: var(--accent-ink);
+  padding: 12px 18px; border-radius: 0 0 var(--r-sm) 0; font-weight: 600;
+}
+.skip:focus { left: 0; }
+
+/* =====================================================================
+   CABECERA
+   ===================================================================== */
 header.top {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; padding: 18px 20px; max-width: 1000px; margin: 0 auto;
+  position: sticky; top: 0; z-index: var(--z-header);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 16px var(--gutter);
+  background: rgba(9, 16, 34, .72);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid var(--hairline);
+  box-shadow: var(--edge);
 }
-.brand { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 20px; letter-spacing: .3px; }
+header.top > * { max-width: 1180px; }
+
+.brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .brand .logo {
-  width: 50px; height: 50px; border-radius: 12px; display: grid; place-items: center;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font-weight: 900;
-  overflow: hidden; flex: 0 0 auto;
+  width: 46px; height: 46px; flex: 0 0 auto;
+  border-radius: 14px; display: grid; place-items: center; overflow: hidden;
+  background: linear-gradient(160deg, var(--accent-hi), var(--accent));
+  color: var(--accent-ink); font-weight: 700; font-size: 16px; letter-spacing: -.02em;
+  box-shadow: 0 6px 18px -8px rgba(var(--accent-rgb), .8), inset 0 1px 0 rgba(255, 255, 255, .25);
 }
-.brand small { display: block; font-size: 11px; font-weight: 600; color: var(--txt-dim); letter-spacing: .5px; }
-nav.links a { color: var(--txt-dim); text-decoration: none; font-size: 13px; margin-left: 16px; }
-nav.links a:hover { color: var(--txt); }
+.brand .logo img { width: 100%; height: 100%; object-fit: cover; }
+.brand .logo.has-img { background: var(--surface-2); box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--hairline-hi); }
+.brand .texto { min-width: 0; }
+.brand #brandName {
+  display: block; font-weight: 600; font-size: 19px; letter-spacing: -.02em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.brand small {
+  display: block; font-size: 10px; font-weight: 600; letter-spacing: .14em;
+  color: var(--ink-subtle); text-transform: uppercase;
+}
 
-.clock { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--txt-dim); font-size: 14px; }
+.clock {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px; font-weight: 500; color: var(--ink-muted);
+  text-align: right; white-space: nowrap;
+}
 
-.brand .logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
-.brand .logo.has-img { background: none; }
-
-/* Pestanas */
-.tabs { display: flex; gap: 8px; max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+/* =====================================================================
+   PESTAÑAS (control segmentado)
+   ===================================================================== */
+.tabs {
+  display: flex; gap: 4px; align-self: center; width: 100%; max-width: 1180px;
+  margin: 22px auto 0; padding: 5px; border-radius: var(--r-pill);
+  background: var(--surface-1); border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-sm), var(--edge);
+  width: fit-content;
+}
 .tab {
-  border: 1px solid var(--line); border-bottom: none; background: var(--bg-2); color: var(--txt-dim);
-  padding: 12px 22px; border-radius: 12px 12px 0 0; cursor: pointer; font-weight: 700; font-size: 15px;
+  position: relative; display: inline-flex; align-items: center; gap: 8px;
+  border: none; background: none; color: var(--ink-subtle);
+  padding: 10px 22px; border-radius: var(--r-pill);
+  font-size: 14px; font-weight: 600; letter-spacing: -.01em; cursor: pointer;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
-.tab.active { background: var(--card); color: var(--txt); border-color: var(--line); }
-.tab:hover { color: var(--txt); }
-/* Indicador de notificaciones pendientes en la pestaña Administración */
+.tab:hover { color: var(--ink-muted); }
+.tab.active {
+  color: var(--ink);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--hairline-hi);
+}
+
+/* Indicador de notificaciones pendientes */
 .notif-dot {
-  display: inline-block; min-width: 20px; padding: 2px 6px; margin-left: 8px;
-  border-radius: 999px; background: var(--bad); color: #fff;
-  font-size: 12px; font-weight: 800; text-align: center; vertical-align: middle; line-height: 1.3;
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px;
+  border-radius: var(--r-pill); background: var(--bad); color: #fff;
+  font-family: 'Geist Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums;
+  font-size: 11px; font-weight: 700; line-height: 1;
+  box-shadow: 0 0 0 3px rgba(var(--bad-rgb), .18);
+  animation: latido 2.6s var(--ease) infinite;
 }
+@keyframes latido {
+  0%, 88%, 100% { box-shadow: 0 0 0 3px rgba(var(--bad-rgb), .18); }
+  94%           { box-shadow: 0 0 0 7px rgba(var(--bad-rgb), 0); }
+}
+
 .tabpane { display: none; }
-.tabpane.active { display: block; }
+.tabpane.active { display: block; animation: entra 340ms var(--ease) both; }
+@keyframes entra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-/* Sub-pestañas (dentro de "Mi cuenta") */
-.subtabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
-.subtab { background: none; border: none; color: var(--txt-dim); padding: 9px 13px; cursor: pointer; font-weight: 700; font-size: 13px; border-bottom: 2px solid transparent; }
-.subtab.active { color: var(--txt); border-bottom-color: var(--accent); }
-.subtab:hover { color: var(--txt); }
-.ss-pane { padding-top: 14px; }
-.estado-pill { padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; white-space: nowrap; display: inline-block; }
-.est-pendiente { background: rgba(241,196,15,.15); color: var(--warn); }
-.est-aprobada { background: rgba(46,204,113,.15); color: var(--ok); }
-.est-denegada { background: rgba(231,76,60,.15); color: #ff8a7a; }
+/* =====================================================================
+   ESTRUCTURA
+   ===================================================================== */
+.wrap { width: 100%; max-width: 1180px; margin: 0 auto; padding: 26px var(--gutter) 40px; flex: 1; }
 
-.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-.pad { padding: 22px; }
+/* El kiosko ocupa la pantalla: es una terminal, no una página que se lee */
+#tab-fichaje.active { display: flex; flex-direction: column; justify-content: center; min-height: calc(100dvh - 250px); }
 
-h1 { font-size: 24px; margin: 4px 0 2px; }
-h2 { font-size: 18px; margin: 0 0 12px; }
-.sub { color: var(--txt-dim); font-size: 14px; margin: 0 0 18px; }
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg), var(--edge);
+}
+.pad { padding: clamp(20px, 3vw, 34px); }
 
-/* Rejilla de empleados */
-.empleados { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.cabecera-seccion { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+h1 {
+  font-size: clamp(24px, 3.4vw, 34px); font-weight: 600; letter-spacing: -.03em;
+  line-height: 1.15; margin: 0; text-wrap: balance;
+}
+h2 { font-size: 17px; font-weight: 600; letter-spacing: -.02em; margin: 0 0 4px; text-wrap: balance; }
+.sub { color: var(--ink-subtle); font-size: 14px; margin: 8px 0 24px; max-width: 62ch; text-wrap: pretty; }
+.muted { color: var(--ink-subtle); }
+.center { text-align: center; }
+.mt { margin-top: 20px; } .mb { margin-bottom: 20px; }
+.hidden { display: none !important; }
+
+/* =====================================================================
+   RELOJ PROTAGONISTA DEL KIOSKO
+   En un terminal de fichaje la hora es la información principal: se mira
+   antes de fichar. Va grande, en cifras monoespaciadas y tabulares para
+   que no "baile" al cambiar de minuto.
+   ===================================================================== */
+.hora-hero {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+  padding-bottom: 24px; margin-bottom: 26px; border-bottom: 1px solid var(--hairline);
+}
+.hora-grande {
+  margin: 0; display: flex; align-items: baseline; gap: 3px;
+  font-family: 'Geist Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums;
+  font-size: clamp(46px, 8vw, 76px); font-weight: 500; line-height: 1;
+  letter-spacing: -.045em; color: var(--ink);
+  text-shadow: 0 0 42px rgba(var(--accent-rgb), .16);
+}
+.hora-grande .seg {
+  font-size: clamp(18px, 2.4vw, 26px); font-weight: 500; color: var(--ink-subtle);
+  letter-spacing: -.02em;
+}
+.hora-grande .seg::before { content: ':'; opacity: .45; margin-right: 1px; }
+.hora-fecha {
+  margin: 10px 0 0; color: var(--ink-subtle);
+  font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+}
+.titulo-fichar { font-size: clamp(19px, 2.2vw, 23px); }
+
+/* Con el reloj dentro de la tarjeta, el de la cabecera sobra en el kiosko */
+body:has(#tab-fichaje.active) header.top .clock { display: none; }
+
+/* =====================================================================
+   REJILLA DE EMPLEADOS (lo que más se toca en el mostrador)
+   ===================================================================== */
+.empleados {
+  display: grid; gap: 14px; justify-content: center;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 216px));
+}
+
 .emp {
-  background: var(--card-2); border: 1px solid var(--line); border-radius: 14px;
-  padding: 18px 14px; text-align: center; cursor: pointer; transition: transform .08s, border-color .15s;
-  display: flex; flex-direction: column; gap: 8px; align-items: center;
+  --emp-tinte: var(--hairline-hi);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 26px 16px 22px; min-height: 176px;
+  background: var(--surface-2); color: var(--ink);
+  border: 1px solid var(--hairline); border-radius: var(--r-lg);
+  cursor: pointer; text-align: center; overflow: hidden; position: relative;
+  box-shadow: var(--shadow-md), var(--edge);
+  transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease),
+              background var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  animation: sube 460ms var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 45ms);
 }
-.emp:hover { transform: translateY(-2px); border-color: var(--accent); }
+@keyframes sube { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+
+/* Halo del color de estado, apagado hasta que se apunta */
+.emp::before {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(120% 70% at 50% -20%, var(--emp-tinte), transparent 70%);
+  opacity: .18; transition: opacity var(--dur) var(--ease);
+}
+.emp:hover {
+  transform: translateY(-3px);
+  background: var(--surface-3); border-color: var(--emp-tinte);
+  box-shadow: var(--shadow-lg), var(--edge);
+}
+.emp:hover::before { opacity: .38; }
+.emp:active { transform: translateY(-1px) scale(.985); }
+.emp:focus-visible { outline-offset: 4px; }
+
 .emp .avatar {
-  width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center;
-  font-size: 22px; font-weight: 800; color: #fff;
-  background: linear-gradient(135deg, #26407e, #18294f);
+  width: 64px; height: 64px; border-radius: 22px; display: grid; place-items: center;
+  font-size: 21px; font-weight: 600; letter-spacing: -.02em; color: var(--ink);
+  background: linear-gradient(155deg, var(--surface-3), #0f1b35);
+  box-shadow: inset 0 0 0 1px var(--hairline-hi), 0 8px 20px -10px rgba(3, 7, 18, .9);
 }
-.emp .nombre { font-weight: 700; font-size: 15px; }
-.emp .estado { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 700; }
-.est-fuera { background: #2a3150; color: var(--txt-dim); }
-.est-trabajando { background: rgba(46,204,113,.15); color: var(--ok); }
-.est-en_pausa { background: rgba(241,196,15,.15); color: var(--warn); }
+.emp .nombre { font-weight: 600; font-size: 15px; letter-spacing: -.01em; text-wrap: balance; }
 
-/* Teclado PIN */
-.pinpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 320px; margin: 0 auto; }
+.emp .estado {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 600; padding: 4px 12px 4px 9px;
+  border-radius: var(--r-pill); color: var(--ink-subtle);
+  background: rgba(255, 255, 255, .04); box-shadow: inset 0 0 0 1px var(--hairline);
+}
+.emp .estado::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: 0 0 auto;
+}
+.est-fuera { color: var(--ink-subtle); }
+.est-trabajando {
+  color: var(--ok); background: rgba(var(--ok-rgb), .1) !important;
+  box-shadow: inset 0 0 0 1px rgba(var(--ok-rgb), .25) !important;
+}
+.est-trabajando::before { animation: pulso 2.4s var(--ease) infinite; }
+@keyframes pulso {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--ok-rgb), .5); }
+  70%      { box-shadow: 0 0 0 6px rgba(var(--ok-rgb), 0); }
+}
+.est-en_pausa {
+  color: var(--pause); background: rgba(var(--pause-rgb), .1) !important;
+  box-shadow: inset 0 0 0 1px rgba(var(--pause-rgb), .25) !important;
+}
+.emp:has(.est-trabajando) { --emp-tinte: rgba(var(--ok-rgb), .55); }
+.emp:has(.est-en_pausa)   { --emp-tinte: rgba(var(--pause-rgb), .55); }
+
+/* =====================================================================
+   TECLADO PIN
+   ===================================================================== */
+/* En pantalla ancha, teclado y acciones conviven a lo ancho: así el botón
+   de ENTRADA/SALIDA nunca queda por debajo del borde de la pantalla. */
+#pinNormal {
+  display: grid; gap: 4px 40px; align-items: start;
+  grid-template-areas: 'dots' 'hint' 'pad' 'acciones';
+}
+#dots { grid-area: dots; } .pin-hint { grid-area: hint; } #pinpad { grid-area: pad; } #acciones { grid-area: acciones; }
+@media (min-width: 900px) {
+  #pinNormal {
+    grid-template-columns: 300px minmax(0, 480px);
+    grid-template-areas: 'dots dots' 'hint hint' 'pad acciones';
+    justify-content: center; gap: 4px 32px;
+  }
+  #acciones { align-self: center; margin-top: 0; }
+}
+
+.pindots { display: flex; gap: 16px; justify-content: center; margin: 18px 0 10px; }
+.pindot {
+  width: 17px; height: 17px; border-radius: 50%;
+  border: 1.5px solid var(--hairline-hi); background: transparent;
+  transition: transform var(--dur) var(--ease), background var(--dur) var(--ease),
+              border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.pindot.on {
+  background: var(--accent); border-color: var(--accent); transform: scale(1.12);
+  box-shadow: 0 0 16px -2px rgba(var(--accent-rgb), .8);
+}
+
+.pin-hint { margin: 0 0 18px; font-size: 14px; }
+.pinpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; max-width: 320px; margin: 0 auto; width: 100%; }
 .pinpad button {
-  font-size: 26px; font-weight: 700; padding: 18px 0; border-radius: 14px;
-  border: 1px solid var(--line); background: var(--card-2); color: var(--txt); cursor: pointer;
+  display: grid; place-items: center;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 24px; font-weight: 500; padding: 16px 0;
+  color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--hairline); border-radius: var(--r-md);
+  cursor: pointer; box-shadow: var(--shadow-sm), var(--edge);
+  transition: transform 120ms var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
-.pinpad button:hover { border-color: var(--accent); }
-.pinpad button.wide { grid-column: span 1; }
-.pindots { display: flex; gap: 14px; justify-content: center; margin: 8px 0 20px; }
-.pindot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); }
-.pindot.on { background: var(--accent); border-color: var(--accent); }
+.pinpad button:hover { background: var(--surface-3); border-color: var(--hairline-hi); }
+.pinpad button:active { transform: scale(.955); background: var(--surface-1); }
+.pinpad button svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 1.6; }
 
-/* Botones de accion */
-.acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 520px; margin: 0 auto; }
+/* =====================================================================
+   BOTONES
+   ===================================================================== */
 .btn {
-  border: none; border-radius: 14px; padding: 20px; font-size: 18px; font-weight: 800;
-  cursor: pointer; color: #fff; transition: transform .08s, opacity .15s; letter-spacing: .3px;
+  --btn-tinte: 0, 0, 0;
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  border: 1px solid transparent; border-radius: var(--r-md);
+  padding: 19px 24px; font-size: 15px; font-weight: 600; letter-spacing: .01em;
+  color: #fff; cursor: pointer; text-align: center;
+  box-shadow: var(--shadow-md), var(--edge);
+  transition: transform 140ms var(--ease), box-shadow var(--dur) var(--ease),
+              background var(--dur) var(--ease), border-color var(--dur) var(--ease), opacity var(--dur);
 }
-.btn:disabled { opacity: .35; cursor: not-allowed; }
-.btn:not(:disabled):hover { transform: translateY(-2px); }
-.btn-entrada { background: linear-gradient(135deg, #2ecc71, #1f9d57); }
-.btn-salida { background: linear-gradient(135deg, #e74c3c, #c0392b); }
-.btn-inicio_pausa { background: linear-gradient(135deg, #f1c40f, #d4a704); color: #1a1a1a; }
-.btn-fin_pausa { background: linear-gradient(135deg, #3498db, #2477b3); }
-.btn-ghost { background: var(--card-2); color: var(--txt); border: 1px solid var(--line); }
-.btn-primary { background: linear-gradient(135deg, var(--accent), #e07b00); color: #1a1208; }
-.btn-sm { padding: 9px 14px; font-size: 13px; border-radius: 10px; }
+.btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: var(--shadow-lg), 0 14px 34px -18px rgba(var(--btn-tinte), .9), var(--edge); }
+.btn:not(:disabled):active { transform: translateY(0) scale(.985); }
+.btn:disabled { opacity: .3; cursor: not-allowed; box-shadow: none; }
+
+/* Acciones de fichaje: color semántico, el más pulsado del kiosko */
+.acciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; max-width: 520px; margin: 0 auto; width: 100%; }
+.acciones .btn { min-height: 86px; font-size: 16px; letter-spacing: .04em; border-radius: var(--r-lg); }
+
+.btn-entrada      { background: var(--ok);   --btn-tinte: var(--ok-rgb); }
+.btn-salida       { background: var(--bad);  --btn-tinte: var(--bad-rgb); }
+.btn-inicio_pausa { background: var(--pause); color: #241906; --btn-tinte: var(--pause-rgb); }
+.btn-fin_pausa    { background: var(--info); --btn-tinte: var(--info-rgb); }
+
+.btn-primary { background: var(--accent); color: var(--accent-ink); --btn-tinte: var(--accent-rgb); }
+.btn-primary:not(:disabled):hover { background: var(--accent-hi); }
+.btn-ghost {
+  background: var(--surface-2); color: var(--ink-muted);
+  border-color: var(--hairline); box-shadow: var(--shadow-sm), var(--edge);
+}
+.btn-ghost:not(:disabled):hover { background: var(--surface-3); border-color: var(--hairline-hi); color: var(--ink); }
+.btn-sm { padding: 10px 16px; font-size: 13px; border-radius: var(--r-sm); }
+.btn-aprobar { background: var(--ok); --btn-tinte: var(--ok-rgb); }
+.btn-denegar { background: var(--bad); --btn-tinte: var(--bad-rgb); }
+
+/* Icono en botón (flechas de volver, etc.) */
+.btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.9; flex: 0 0 auto; }
+
+/* =====================================================================
+   FORMULARIOS
+   ===================================================================== */
+label { display: block; font-size: 13px; font-weight: 500; color: var(--ink-muted); margin: 0 0 7px; }
 
 input, select {
-  width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line);
-  background: var(--bg-2); color: var(--txt); font-size: 15px;
+  width: 100%; padding: 12px 14px;
+  color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--hairline); border-radius: var(--r-sm);
+  font-size: 15px; box-shadow: var(--edge);
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
-label { display: block; font-size: 13px; color: var(--txt-dim); margin: 12px 0 6px; }
+input::placeholder { color: var(--ink-subtle); }
+input:hover, select:hover { border-color: var(--hairline-hi); }
+input:focus-visible, select:focus-visible {
+  outline: none; border-color: var(--accent); background: var(--surface-3);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .18);
+}
+input[type="password"] { font-family: 'Geist Mono', ui-monospace, monospace; letter-spacing: .18em; }
+input[type="date"], input[type="datetime-local"], input[type="number"] { font-variant-numeric: tabular-nums; }
+select { appearance: none; padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237285ab' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 16px;
+}
+
+.row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+/* Los campos no se estiran sin límite: un input de 900px para un nombre
+   corto se ve descuidado. */
+.row > div { flex: 1 1 170px; min-width: 0; max-width: 440px; }
+.row > .accion { flex: 0 0 auto; max-width: none; }
+
+/* =====================================================================
+   SUB-PESTAÑAS ("Mi cuenta")
+   ===================================================================== */
+.subtabs { display: flex; gap: 2px; flex-wrap: wrap; border-bottom: 1px solid var(--hairline); margin-top: 22px; }
+.subtab {
+  background: none; border: none; color: var(--ink-subtle);
+  padding: 10px 14px; margin-bottom: -1px; cursor: pointer;
+  font-size: 13px; font-weight: 600; letter-spacing: -.01em;
+  border-bottom: 2px solid transparent;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.subtab:hover { color: var(--ink-muted); }
+.subtab.active { color: var(--ink); border-bottom-color: var(--accent); }
+.ss-pane { padding-top: 20px; }
+
+/* =====================================================================
+   PÍLDORAS Y ETIQUETAS
+   ===================================================================== */
+.pill, .estado-pill {
+  display: inline-block; padding: 3px 11px; border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 600; white-space: nowrap; letter-spacing: -.005em;
+}
+.est-pendiente { background: rgba(var(--pause-rgb), .12); color: var(--pause); box-shadow: inset 0 0 0 1px rgba(var(--pause-rgb), .22); }
+.est-aprobada  { background: rgba(var(--ok-rgb), .12);    color: var(--ok);    box-shadow: inset 0 0 0 1px rgba(var(--ok-rgb), .22); }
+.est-denegada  { background: rgba(var(--bad-rgb), .12);   color: #ff9c91;      box-shadow: inset 0 0 0 1px rgba(var(--bad-rgb), .22); }
+.tag-sync    { background: rgba(var(--info-rgb), .14);  color: #9cc4f0; }
+.tag-manual  { background: rgba(var(--accent-rgb), .14); color: var(--accent-hi); }
+.tag-auto    { background: rgba(155, 122, 200, .16);     color: #c3addf; }
+.tag-anulado { background: rgba(var(--bad-rgb), .12); color: #ff9c91; text-decoration: line-through; }
+
+/* =====================================================================
+   TABLAS
+   ===================================================================== */
+.tabla-scroll { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--hairline); }
+th {
+  color: var(--ink-subtle); font-weight: 600; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .09em; white-space: nowrap;
+}
+tbody tr { transition: background var(--dur) var(--ease); }
+tbody tr:hover { background: rgba(255, 255, 255, .022); }
+tbody tr:last-child td { border-bottom: none; }
+td { font-variant-numeric: tabular-nums; }
+
+/* =====================================================================
+   AVISOS, BANNERS Y NOTIFICACIONES
+   ===================================================================== */
+.banner {
+  display: flex; gap: 10px; align-items: baseline;
+  background: rgba(var(--pause-rgb), .08); border: 1px solid rgba(var(--pause-rgb), .3);
+  color: var(--pause); padding: 13px 16px; border-radius: var(--r-md);
+  font-size: 14px; margin-bottom: 18px;
+}
+.banner.bad { background: rgba(var(--bad-rgb), .08); border-color: rgba(var(--bad-rgb), .3); color: #ff9c91; }
+.banner.resumen { background: rgba(var(--info-rgb), .1); border-color: rgba(var(--info-rgb), .32); color: #a6cbf0; }
+.nota-admin { font-size: 11px; }
 
 .toast {
-  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
-  background: var(--card-2); border: 1px solid var(--line); color: var(--txt);
-  padding: 14px 22px; border-radius: 12px; box-shadow: var(--shadow); font-weight: 600;
-  opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 50;
+  position: fixed; left: 50%; bottom: 32px; z-index: var(--z-toast);
+  transform: translateX(-50%) translateY(14px);
+  background: rgba(17, 29, 56, .92); backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid var(--hairline-hi); color: var(--ink);
+  padding: 15px 24px; border-radius: var(--r-md); font-weight: 500;
+  box-shadow: var(--shadow-lg), var(--edge);
+  opacity: 0; pointer-events: none; max-width: min(92vw, 460px); text-align: center;
+  transition: opacity 260ms var(--ease), transform 260ms var(--ease);
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast.ok { border-color: var(--ok); }
-.toast.bad { border-color: var(--bad); }
+.toast.ok  { border-color: rgba(var(--ok-rgb), .5); }
+.toast.bad { border-color: rgba(var(--bad-rgb), .5); }
 
-.banner {
-  background: rgba(241,196,15,.1); border: 1px solid rgba(241,196,15,.4); color: var(--warn);
-  padding: 12px 16px; border-radius: 12px; font-size: 14px; margin-bottom: 16px;
+/* Bloques plegables (auditoría, empleados de baja...) */
+details { border: 1px solid var(--hairline); border-radius: var(--r-md); background: rgba(255, 255, 255, .015); }
+details summary {
+  cursor: pointer; padding: 13px 16px; font-size: 13px; font-weight: 600;
+  color: var(--ink-muted); list-style: none; display: flex; align-items: center; gap: 9px;
+  border-radius: var(--r-md);
 }
-.banner.bad { background: rgba(231,76,60,.1); border-color: rgba(231,76,60,.4); color: #ff8a7a; }
+details summary::-webkit-details-marker { display: none; }
+details summary::before {
+  content: ''; width: 7px; height: 7px; flex: 0 0 auto;
+  border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor;
+  transform: rotate(-45deg); transition: transform var(--dur) var(--ease);
+}
+details[open] summary::before { transform: rotate(45deg); }
+details summary:hover { color: var(--ink); }
+details > *:not(summary) { padding: 0 16px 16px; }
 
-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
-th { color: var(--txt-dim); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
-.muted { color: var(--txt-dim); }
-.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
-.row > div { flex: 1; min-width: 140px; }
-.hidden { display: none !important; }
-.center { text-align: center; }
-.mt { margin-top: 18px; } .mb { margin-bottom: 18px; }
-.pill { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-.tag-sync { background: rgba(90,140,255,.18); color: #9cc0ff; }
-.tag-manual { background: rgba(245,160,31,.18); color: #f6bd5e; }
-.tag-anulado { background: rgba(231,76,60,.15); color: #ff8a7a; text-decoration: line-through; }
-.tag-auto { background: rgba(155,89,182,.18); color: #c9a6dd; }
+/* =====================================================================
+   PIE
+   ===================================================================== */
+footer.legal {
+  text-align: center; color: var(--ink-subtle); font-size: 12px;
+  padding: 26px var(--gutter) 34px; border-top: 1px solid var(--hairline);
+  margin-top: auto; text-wrap: pretty;
+}
 
-footer.legal { text-align: center; color: var(--txt-dim); font-size: 12px; padding: 26px 16px; }
+/* =====================================================================
+   RESPONSIVE
+   ===================================================================== */
+@media (max-width: 560px) {
+  .empleados { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .emp { min-height: 150px; padding: 20px 12px 18px; }
+  .emp .avatar { width: 54px; height: 54px; border-radius: 18px; font-size: 18px; }
+  .acciones { grid-template-columns: 1fr; }
+  .clock { font-size: 12px; }
+  .tabs { width: 100%; }
+  .tab { flex: 1; justify-content: center; padding: 10px 12px; }
+}
+
+/* =====================================================================
+   MOVIMIENTO REDUCIDO (preferencia del sistema)
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
