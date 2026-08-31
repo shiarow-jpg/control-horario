@@ -62,20 +62,11 @@ export function relojHeroEn(selHora, selSeg, selFecha) {
   const fmtHM = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: TZ, hour12: false });
   const fmtS = new Intl.DateTimeFormat('es-ES', { second: '2-digit', timeZone: TZ, hour12: false });
   const fmtF = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ });
-  // Cada cifra en su casilla de ancho fijo: la tipografía de cartel no
-  // tiene cifras tabulares y, si no, el reloj "baila" al cambiar de dígito.
-  const enCeldas = (txt) => [...txt]
-    .map(ch => /\d/.test(ch) ? `<span class="d">${ch}</span>` : `<span class="sep">${ch}</span>`)
-    .join('');
-  let ultimaHora = '', ultimoSeg = '', ultimaFecha = '';
+  let ultimaFecha = '';
   const tick = () => {
     const ahora = new Date();
-    const hm = fmtHM.format(ahora);
-    if (hm !== ultimaHora) { ultimaHora = hm; hEl.innerHTML = enCeldas(hm); }
-    if (sEl) {
-      const s = fmtS.format(ahora).padStart(2, '0');
-      if (s !== ultimoSeg) { ultimoSeg = s; sEl.innerHTML = enCeldas(s); }
-    }
+    enCeldas(hEl, fmtHM.format(ahora));
+    if (sEl) enCeldas(sEl, fmtS.format(ahora).padStart(2, '0'));
     if (fEl) {
       const f = fmtF.format(ahora);
       if (f !== ultimaFecha) { ultimaFecha = f; fEl.textContent = f; }
@@ -102,6 +93,25 @@ export const ETIQUETA = {
 };
 export const ETIQUETA_ESTADO = { fuera: 'Fuera', trabajando: 'Trabajando', en_pausa: 'En almuerzo' };
 
+// Escribe una cifra por casilla de ancho fijo. La tipografía de cartel no
+// tiene cifras tabulares (el "1" mide la mitad que el "0"), así que sin
+// esto el reloj y los cronómetros "bailarían" a cada tic. Solo se tocan
+// los dígitos que han cambiado, no se rehace el bloque entero.
+export function enCeldas(el, txt) {
+  if (el.dataset.txt === txt) return;
+  if (el.dataset.txt && el.dataset.txt.length === txt.length) {
+    const celdas = el.children;
+    for (let i = 0; i < txt.length; i++) {
+      if (celdas[i] && celdas[i].textContent !== txt[i]) celdas[i].textContent = txt[i];
+    }
+  } else {
+    el.innerHTML = [...txt]
+      .map(ch => `<span class="${/\d/.test(ch) ? 'd' : 'sep'}">${ch}</span>`)
+      .join('');
+  }
+  el.dataset.txt = txt;
+}
+
 // ---- Cronómetros en vivo ----
 // Un elemento con [data-crono] lleva el tiempo YA consolidado (data-base, en
 // segundos) y, si el tramo sigue abierto, el instante en que empezó
@@ -121,7 +131,7 @@ export function segundosCrono(el) {
 }
 
 export function pintarCronometros() {
-  for (const el of document.querySelectorAll('[data-crono]')) el.textContent = fmtCrono(segundosCrono(el));
+  for (const el of document.querySelectorAll('[data-crono]')) enCeldas(el, fmtCrono(segundosCrono(el)));
 }
 
 let cronoIniciado = false;

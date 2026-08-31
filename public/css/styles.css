@@ -122,6 +122,10 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .skip { position: absolute; left: -9999px; top: 0; z-index: 100; background: var(--ink); color: var(--paper); padding: 12px 18px; font-weight: 700; }
 .skip:focus { left: 0; }
 
+/* Los cronómetros hablan con la misma voz que el reloj y el marcador:
+   tipografía de cartel, cada cifra en su casilla. */
+[data-crono] { font-family: var(--font-display); font-weight: 400; letter-spacing: .02em; }
+
 /* Micro-rótulo impreso */
 .board-label, .brand small, th, .hora-fecha, .board-dato, .marcador-dato span, label, .subtab, .pill, .estado-pill {
   font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .15em;
@@ -232,8 +236,9 @@ h2 { font-family: var(--font-display); font-size: 17px; letter-spacing: .04em; t
   font-size: clamp(48px, 6.8vw, 86px); font-weight: 400; line-height: .88;
   letter-spacing: .005em; color: var(--ink);
 }
-.hora-grande .d { display: inline-block; width: .54em; text-align: center; }
-.hora-grande .sep { display: inline-block; width: .3em; text-align: center; }
+/* Casillas de cifra: las usan el reloj y los cronómetros por igual */
+.d { display: inline-block; width: .54em; text-align: center; }
+.sep { display: inline-block; width: .3em; text-align: center; }
 .hora-grande .seg {
   font-size: clamp(17px, 1.7vw, 24px); color: var(--spot-txt);
   letter-spacing: .02em; align-self: flex-start; margin-top: .5em;
@@ -330,9 +335,8 @@ h2 { font-family: var(--font-display); font-size: 17px; letter-spacing: .04em; t
 .emp-crono {
   position: absolute; top: 9px; right: 9px; z-index: 3;
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 4px 9px 4px 8px; border-radius: var(--r-pill);
-  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: 11.5px; font-weight: 700; letter-spacing: -.02em;
+  padding: 3px 9px 3px 8px; border-radius: var(--r-pill);
+  font-size: 14px;
   background: var(--paper-3); border: 2px solid var(--ink); color: var(--ink);
 }
 .emp-crono::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
@@ -400,8 +404,7 @@ h2 { font-family: var(--font-display); font-size: 17px; letter-spacing: .04em; t
 /* Cronómetro grande */
 .crono-panel { margin-top: 24px; padding-top: 20px; border-top: var(--borde); }
 .crono-grande {
-  margin: 8px 0 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: clamp(34px, 3.6vw, 46px); font-weight: 700; line-height: 1; letter-spacing: -.05em;
+  margin: 8px 0 0; font-size: clamp(38px, 4vw, 52px); line-height: 1;
   color: var(--verde);
 }
 .crono-panel.en-pausa .crono-grande { color: var(--ink-3); }
@@ -409,6 +412,9 @@ h2 { font-family: var(--font-display); font-size: 17px; letter-spacing: .04em; t
   margin: 12px 0 0; font-family: var(--font-mono); font-size: 11px; font-weight: 600;
   text-transform: uppercase; letter-spacing: .12em; color: var(--ink-3);
 }
+/* El valor del almuerzo también en cartel, un punto mayor para que la
+   condensada se lea bien a este tamaño */
+.crono-pausa [data-crono] { font-size: 15px; letter-spacing: .01em; }
 .crono-panel.en-pausa .crono-pausa { color: var(--spot-txt); }
 
 /* =====================================================================
