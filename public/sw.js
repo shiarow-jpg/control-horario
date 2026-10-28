@@ -1,13 +1,13 @@
 // Service worker: cachea el "shell" para que la app cargue sin conexion.
 // Las llamadas al API NO se cachean (van siempre a red); los fichajes offline
 // se gestionan con la cola en localStorage (ver fichar.js).
-const CACHE = 'fichaje-mn-v9-manga';
+const CACHE = 'fichaje-mn-v12-patoweb';
 const SHELL = [
   '/', '/index.html',
   '/css/styles.css', '/js/app.js', '/js/common.js', '/js/fichar.js', '/js/mis-fichajes.js', '/js/admin.js',
-  '/manifest.json', '/img/icon.svg',
+  '/pato.js', '/manifest.json', '/img/icon.svg', '/img/emblema.svg',
   // Tipografía autoalojada: el kiosko debe verse igual sin conexión.
-  '/fonts/geist-latin.woff2', '/fonts/geist-latin-ext.woff2', '/fonts/geist-mono-latin.woff2', '/fonts/anton-latin.woff2',
+  '/fonts/instrument-sans.woff2', '/fonts/londrina-solid-400.woff2', '/fonts/londrina-solid-900.woff2', '/fonts/caveat-brush-400.woff2',
 ];
 
 self.addEventListener('install', (e) => {

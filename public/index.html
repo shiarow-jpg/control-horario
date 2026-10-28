@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Fichaje · Control Horario</title>
   <meta name="description" content="Registro de jornada laboral conforme al art. 34.9 del Estatuto de los Trabajadores: fichaje por PIN, informes y registro inalterable." />
-  <meta name="theme-color" content="#16130e" />
+  <meta name="theme-color" content="#12386e" />
   <link rel="icon" href="/img/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/img/icon.svg" />
-  <link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="preload" href="/fonts/geist-mono-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="preload" href="/fonts/anton-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/londrina-solid-400.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/caveat-brush-400.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/css/styles.css" />
   <link rel="manifest" href="/manifest.json" />
 </head>
@@ -40,12 +40,15 @@
 
       <div id="vistaEmpleados" class="escena hidden">
         <div class="marquesina">
-          <div class="reloj-bloque">
-            <p class="hora-grande"><span id="relojHora">--:--</span><span class="seg" id="relojSeg">00</span></p>
-            <p class="hora-fecha" id="relojFecha"></p>
+          <div class="marquesina-info">
+            <div class="reloj-bloque">
+              <p class="hora-grande"><span id="relojHora">--:--</span><span class="seg" id="relojSeg">00</span></p>
+              <p class="hora-fecha" id="relojFecha"></p>
+            </div>
+            <div id="resumenEstado" class="marcador"></div>
+            <button class="btn btn-ghost btn-sm" id="btnMisFichajes">Mis fichajes</button>
           </div>
-          <div id="resumenEstado" class="marcador"></div>
-          <button class="btn btn-ghost btn-sm" id="btnMisFichajes">Mis fichajes</button>
+          <div class="marca-emblema"><img src="/img/emblema.svg" alt="" aria-hidden="true" width="140" height="140" /></div>
         </div>
         <div class="escena-cuerpo">
           <h1 class="titulo-xl" data-texto="¿Quién ficha?">¿Quién ficha?</h1>
@@ -341,8 +344,11 @@
     </section>
   </main>
 
-  <footer class="legal">Registro de jornada conforme al art. 34.9 del Estatuto de los Trabajadores · Datos inalterables y conservados 4 años.</footer>
+  <footer class="legal">Registro de jornada conforme al art. 34.9 del Estatuto de los Trabajadores · Datos inalterables y conservados 4 años. · <a href="#" id="pato-esconder">Esconder el pato</a></footer>
 
+  <div id="pato" aria-hidden="true"><div class="pato-sombra"></div><div class="pato-sprite"></div><div class="pato-agarre"></div></div>
+  <script>window.MN={"pato":{"base":"/img/pato2","v":"ed732828","fps":12,"tamanos":[160,240,320],"acciones":{"reposo":{"fotogramas":24,"cols":8,"bucle":true},"impaciente":{"fotogramas":36,"cols":8,"bucle":true},"mirar":{"fotogramas":24,"cols":8,"bucle":true},"arranque":{"fotogramas":10,"cols":8,"bucle":false},"carrera":{"fotogramas":8,"cols":8,"bucle":true},"frenazo":{"fotogramas":10,"cols":8,"bucle":false},"puntillas":{"fotogramas":16,"cols":8,"bucle":true,"avance":0.225},"colgado":{"fotogramas":12,"cols":8,"bucle":true},"volando":{"fotogramas":8,"cols":8,"bucle":true},"aterrizaje":{"fotogramas":24,"cols":8,"bucle":false},"dormir":{"fotogramas":36,"cols":8,"bucle":true},"despertar":{"fotogramas":16,"cols":8,"bucle":false},"toma":{"fotogramas":16,"cols":8,"bucle":false},"saludo":{"fotogramas":18,"cols":8,"bucle":false},"fx_polvo":{"fotogramas":10,"cols":8,"bucle":false},"fx_derrape":{"fotogramas":8,"cols":8,"bucle":false},"fx_impacto":{"fotogramas":8,"cols":8,"bucle":false}},"afkMs":20000}}</script>
+  <script src="/pato.js" defer></script>
   <script type="module" src="/js/app.js"></script>
   <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});</script>
 </body>
