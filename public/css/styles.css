@@ -536,7 +536,8 @@ footer.legal {
 #pato .pato-sprite { position: absolute; inset: 0; background-repeat: no-repeat; pointer-events: none; transform-origin: 52% 88%; }
 #pato .pato-agarre { position: absolute; left: 30%; top: 22%; width: 44%; height: 66%; pointer-events: auto; touch-action: none; cursor: url("/img/cursor-guante.svg") 10 4, grab; border-radius: 40%; }
 #pato.agarrado .pato-agarre, #pato.agarrado { cursor: url("/img/cursor-guante-cerrado.svg") 12 8, grabbing; }
-#pato .pato-sombra { position: absolute; left: 0; top: 0; width: 96px; height: 14px; margin: -7px 0 0 -48px; border-radius: 50%; background: rgb(17 27 54 / .9); opacity: .32; filter: blur(3px); transform-origin: center; pointer-events: none; }
+/* sombra difuminada con un degradado (antes filter: blur, que se recalculaba en cada fotograma: caro en PCs modestos) */
+#pato .pato-sombra { position: absolute; left: 0; top: 0; width: 102px; height: 20px; margin: -10px 0 0 -51px; border-radius: 50%; background: radial-gradient(closest-side, rgb(17 27 54 / .9) 58%, rgb(17 27 54 / 0) 100%); opacity: .32; transform-origin: center; pointer-events: none; }
 .pato-fx { position: fixed; left: 0; top: 0; z-index: 39; background-repeat: no-repeat; pointer-events: none; transform-origin: 52% 88%; will-change: transform, background-position; }
 @media print { #pato, .pato-fx { display: none; } }
-@media (max-width: 639px) { #pato .pato-sombra { width: 56px; height: 10px; margin: -5px 0 0 -28px; } }
+@media (max-width: 639px) { #pato .pato-sombra { width: 62px; height: 16px; margin: -8px 0 0 -31px; } }

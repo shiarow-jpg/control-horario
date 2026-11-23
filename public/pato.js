@@ -98,6 +98,15 @@
   var ultimoMov = performance.now(), ultimaToma = -Infinity;
   var arrastre = null, muestras = [], freno = null, esperaVuelta = 0, yaSaludo = false, apagado = false, rafId = 0;
   var pasoPuntillas = -1, metaPuntillas = 0;
+  /* rendimiento (2026-11-23): el kiosko del mostrador tiene la página abierta todo el día. Antes el bucle iba a la
+     frecuencia de la pantalla (60-180 veces por segundo) aunque el pato estuviera quieto o dormido, y reescribía sus
+     estilos en cada vuelta. Ahora: rAF solo mientras se desplaza; quieto, 24 vueltas por segundo (el doble de lo que
+     cambia el dibujo); dormido más de un minuto, se para del todo hasta que se mueva el ratón o se toque la pantalla. */
+  var EN_MOVIMIENTO = { carrera: 1, frenazo: 1, volando: 1, colgado: 1 };
+  var timerId = 0, congelado = false, tDormido = 0;
+  var SUENO_PROFUNDO_MS = 60000;
+  var ultimoCss = {};
+  function css(el, clave, prop, valor) { if (ultimoCss[clave] !== valor) { ultimoCss[clave] = valor; el.style[prop] = valor; } }
   try { yaSaludo = sessionStorage.getItem('mn-pato-saludo') === '1'; } catch (e) {}
 
   function aplicarHoja(n) {
@@ -204,7 +213,7 @@
     if (afk(performance.now()) && Math.abs(esquina() - p.x) < 14) { dormir(); return; }
     aReposo();
   }
-  function dormir() { enSuelo('dormir'); raiz.classList.add('duerme'); }
+  function dormir() { enSuelo('dormir'); raiz.classList.add('duerme'); tDormido = performance.now(); }
   function despertar() {
     if (p.estado !== 'dormir' || quieto) return;
     raiz.classList.remove('duerme'); p.estado = 'despertar'; poner('despertar', aReposo);
@@ -232,21 +241,23 @@
 
   /* dibujar (también se llama al cambiar el tamaño de la ventana en modo quieto) */
   function dibujar() {
-    raiz.style.transform = 'translate3d(' + Math.round(p.x - p.ancla[0] * TAM) + 'px,' + Math.round(p.y - p.ancla[1] * TAM) + 'px,0)';
-    sprite.style.transform = 'scaleX(' + p.dir + ') rotate(' + (p.rot * p.dir).toFixed(1) + 'deg)';
+    css(raiz, 'r', 'transform', 'translate3d(' + Math.round(p.x - p.ancla[0] * TAM) + 'px,' + Math.round(p.y - p.ancla[1] * TAM) + 'px,0)');
+    css(sprite, 's', 'transform', 'scaleX(' + p.dir + ') rotate(' + (p.rot * p.dir).toFixed(1) + 'deg)');
     // sombra: siempre en el suelo (coordenadas de la caja) y más pequeña cuanto más alto va el pato
     var sueloEnCaja = suelo() - (p.y - p.ancla[1] * TAM);
     var alto = Math.max(0, sueloEnCaja - PIES[1] * TAM);
     var s = Math.max(0.3, 1 - alto / 400);
-    sombra.style.transform = 'translate(' + Math.round(PIES[0] * TAM) + 'px,' + Math.round(sueloEnCaja) + 'px) scale(' + s.toFixed(2) + ')';
-    sombra.style.opacity = (0.32 * s).toFixed(2);
+    css(sombra, 'st', 'transform', 'translate(' + Math.round(PIES[0] * TAM) + 'px,' + Math.round(sueloEnCaja) + 'px) scale(' + s.toFixed(2) + ')');
+    css(sombra, 'so', 'opacity', (0.32 * s).toFixed(2));
   }
 
   /* bucle */
   var ultimo = performance.now();
   function paso(ahora) {
     if (apagado) return;
-    var dt = Math.min(0.05, (ahora - ultimo) / 1000); ultimo = ahora;
+    timerId = 0; rafId = 0;
+    // tope del paso: corto si se desplaza (que no dé saltos); si está quieto va a 24 vueltas/s y el dibujo debe seguir a su ritmo
+    var dt = Math.min(EN_MOVIMIENTO[p.estado] ? 0.05 : 0.25, (ahora - ultimo) / 1000); ultimo = ahora;
     var W = anchoVentana();
     switch (p.estado) {
       case 'fuera':
@@ -314,7 +325,17 @@
       p.x += p.dir * Math.min(Math.abs(metaPuntillas - p.x), VEL_PUNTILLAS / FPS);
     }
     dibujar();
-    rafId = requestAnimationFrame(paso);
+    if (p.estado === 'dormir' && ahora - tDormido > SUENO_PROFUNDO_MS) { congelado = true; return; }   // sueño profundo: 0 CPU
+    programar();
+  }
+  function programar() {
+    if (apagado || congelado || document.hidden || rafId || timerId) return;
+    if (EN_MOVIMIENTO[p.estado]) rafId = requestAnimationFrame(paso);
+    else timerId = setTimeout(function () { paso(performance.now()); }, 500 / FPS);   // el doble del ritmo del dibujo: así no se salta ningún fotograma
+  }
+  function reanudar() {
+    if (!congelado) return;
+    congelado = false; ultimo = performance.now(); programar();
   }
 
   /* entrada */
@@ -325,6 +346,7 @@
   var ultimoPunto = null;
   function alMover(e) {
     if (quieto || apagado) return;
+    reanudar();
     var ahora = performance.now();
     if (arrastre) {
       if (e.pointerId !== arrastre.id) return;      // un segundo dedo no se lleva el pato
@@ -343,11 +365,13 @@
   }
   function alTocar(e) {
     if (quieto || apagado || arrastre) return;
+    reanudar();
     if (e.target.closest && e.target.closest('#pato')) return;
     if (e.pointerType === 'touch') { puntero.x = e.clientX; puntero.y = e.clientY; ultimoMov = performance.now(); if (p.estado === 'dormir') despertar(); }
   }
   function alCoger(e) {
     if (quieto || apagado || arrastre || p.estado === 'fuera' || p.estado === 'volando') return;
+    reanudar();
     e.preventDefault();
     agarre.setPointerCapture(e.pointerId);
     raiz.classList.remove('duerme'); raiz.classList.add('agarrado', 'vuela');
@@ -355,6 +379,7 @@
     arrastre = { id: e.pointerId, x: e.clientX, y: e.clientY, ox: p.x - e.clientX, oy: p.y - e.clientY, t0: performance.now() };
     muestras = []; registrar(e.clientX, e.clientY);
     p.rot = 0; p.estado = 'colgado'; poner('colgado'); pedirResto();
+    if (timerId) { clearTimeout(timerId); timerId = 0; programar(); }   // pasa a rAF ya, para que siga al dedo sin retraso
   }
   function soltar(e) {
     if (!arrastre || (e && e.pointerId !== arrastre.id)) return;
@@ -374,9 +399,13 @@
   function alRedimensionar() {
     if (p.x > anchoVentana()) p.x = maxX();
     if (p.ancla === PIES && p.estado !== 'volando') p.y = suelo();
-    if (quieto) { p.x = anchoVentana() - TAM * 0.4; p.y = suelo(); dibujar(); }
+    if (quieto || congelado) { if (quieto) { p.x = anchoVentana() - TAM * 0.4; } p.y = suelo(); dibujar(); }
   }
-  function alVolver() { ultimo = performance.now(); }
+  function alVolver() {
+    // pestaña oculta: nada de vueltas; al volver, sigue donde estaba
+    if (document.hidden) { if (rafId) cancelAnimationFrame(rafId); if (timerId) clearTimeout(timerId); rafId = timerId = 0; return; }
+    ultimo = performance.now(); programar();
+  }
   window.addEventListener('pointermove', alMover, { passive: true });
   window.addEventListener('pointerdown', alTocar, { passive: true });
   agarre.addEventListener('pointerdown', alCoger);
@@ -401,7 +430,7 @@
     else { p.x = -TAM * 0.5; p.dir = 1; puntero.x = Math.min(W * 0.4, 520); }
     mostrar(true); p.estado = 'carrera'; p.vx = VEL_CORRER * p.dir; poner('carrera');
     ultimo = performance.now(); ultimoMov = performance.now();
-    rafId = requestAnimationFrame(paso);
+    programar();
     setTimeout(pedirResto, 6000);
   }
   // espera a que estén las hojas de la entrada (carrera, frenazo y saludo) o, como mucho, 4 s
@@ -412,12 +441,12 @@
     else setTimeout(esperar, 100);
   })();
   /* sonda para pruebas automáticas (solo lectura) */
-  window.__pato = { estado: function () { return p.estado; }, x: function () { return p.x; }, y: function () { return p.y; }, accion: function () { return accion; }, visible: function () { return p.visible; }, version: 2 };
+  window.__pato = { estado: function () { return p.estado; }, x: function () { return p.x; }, y: function () { return p.y; }, accion: function () { return accion; }, visible: function () { return p.visible; }, congelado: function () { return congelado; }, version: 2 };
 
   /* esconder: se apaga del todo (bucle, eventos y efectos) */
   if (toggle) toggle.addEventListener('click', function (e) {
     e.preventDefault(); try { localStorage.setItem('mn-pato', 'no'); } catch (err) {}
-    apagado = true; cancelAnimationFrame(rafId);
+    apagado = true; cancelAnimationFrame(rafId); clearTimeout(timerId);
     window.removeEventListener('pointermove', alMover); window.removeEventListener('pointerdown', alTocar);
     window.removeEventListener('resize', alRedimensionar); document.removeEventListener('visibilitychange', alVolver);
     document.querySelectorAll('.pato-fx').forEach(function (d) { d.remove(); });
