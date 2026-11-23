@@ -104,6 +104,8 @@
      cambia el dibujo); dormido más de un minuto, se para del todo hasta que se mueva el ratón o se toque la pantalla. */
   var EN_MOVIMIENTO = { carrera: 1, frenazo: 1, volando: 1, colgado: 1 };
   var timerId = 0, congelado = false, tDormido = 0;
+  // en segundo plano (otra ventana delante, ventana minimizada o pestaña oculta): ni un solo fotograma
+  var enFondo = document.hidden || !document.hasFocus();
   var SUENO_PROFUNDO_MS = 60000;
   var ultimoCss = {};
   function css(el, clave, prop, valor) { if (ultimoCss[clave] !== valor) { ultimoCss[clave] = valor; el.style[prop] = valor; } }
@@ -329,7 +331,7 @@
     programar();
   }
   function programar() {
-    if (apagado || congelado || document.hidden || rafId || timerId) return;
+    if (apagado || congelado || enFondo || rafId || timerId) return;
     if (EN_MOVIMIENTO[p.estado]) rafId = requestAnimationFrame(paso);
     else timerId = setTimeout(function () { paso(performance.now()); }, 500 / FPS);   // el doble del ritmo del dibujo: así no se salta ningún fotograma
   }
@@ -402,8 +404,11 @@
     if (quieto || congelado) { if (quieto) { p.x = anchoVentana() - TAM * 0.4; } p.y = suelo(); dibujar(); }
   }
   function alVolver() {
-    // pestaña oculta: nada de vueltas; al volver, sigue donde estaba
-    if (document.hidden) { if (rafId) cancelAnimationFrame(rafId); if (timerId) clearTimeout(timerId); rafId = timerId = 0; return; }
+    // en segundo plano se para en seco; al volver al frente, sigue donde estaba
+    var fondo = document.hidden || !document.hasFocus();
+    if (fondo === enFondo) return;
+    enFondo = fondo;
+    if (enFondo) { if (rafId) cancelAnimationFrame(rafId); if (timerId) clearTimeout(timerId); rafId = timerId = 0; return; }
     ultimo = performance.now(); programar();
   }
   window.addEventListener('pointermove', alMover, { passive: true });
@@ -413,6 +418,8 @@
   agarre.addEventListener('pointercancel', soltar);
   window.addEventListener('resize', alRedimensionar);
   document.addEventListener('visibilitychange', alVolver);
+  window.addEventListener('blur', alVolver);
+  window.addEventListener('focus', alVolver);
 
   /* arranque: entra corriendo desde fuera, derrapa y la primera vez en la sesión saluda */
   function empezar() {
@@ -441,7 +448,7 @@
     else setTimeout(esperar, 100);
   })();
   /* sonda para pruebas automáticas (solo lectura) */
-  window.__pato = { estado: function () { return p.estado; }, x: function () { return p.x; }, y: function () { return p.y; }, accion: function () { return accion; }, visible: function () { return p.visible; }, congelado: function () { return congelado; }, version: 2 };
+  window.__pato = { estado: function () { return p.estado; }, x: function () { return p.x; }, y: function () { return p.y; }, accion: function () { return accion; }, visible: function () { return p.visible; }, congelado: function () { return congelado; }, enFondo: function () { return enFondo; }, version: 2 };
 
   /* esconder: se apaga del todo (bucle, eventos y efectos) */
   if (toggle) toggle.addEventListener('click', function (e) {
@@ -449,6 +456,7 @@
     apagado = true; cancelAnimationFrame(rafId); clearTimeout(timerId);
     window.removeEventListener('pointermove', alMover); window.removeEventListener('pointerdown', alTocar);
     window.removeEventListener('resize', alRedimensionar); document.removeEventListener('visibilitychange', alVolver);
+    window.removeEventListener('blur', alVolver); window.removeEventListener('focus', alVolver);
     document.querySelectorAll('.pato-fx').forEach(function (d) { d.remove(); });
     raiz.remove(); toggle.textContent = 'El pato se ha ido a dormir a la trastienda.';
   });

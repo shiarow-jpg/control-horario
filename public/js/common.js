@@ -1,4 +1,14 @@
 // Utilidades compartidas por las paginas del frontend.
+
+// Segundo plano (otra ventana delante, minimizada o pestaña oculta): se pausan todas las animaciones decorativas
+// para no gastar el ordenador del mostrador. El reloj y los cronómetros siguen.
+function marcarFondo() {
+  document.documentElement.classList.toggle('en-fondo', document.hidden || !document.hasFocus());
+}
+marcarFondo();
+window.addEventListener('blur', marcarFondo);
+window.addEventListener('focus', marcarFondo);
+document.addEventListener('visibilitychange', marcarFondo);
 export async function api(path, { method = 'GET', body } = {}) {
   const res = await fetch(path, {
     method,

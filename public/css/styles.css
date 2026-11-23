@@ -541,3 +541,6 @@ footer.legal {
 .pato-fx { position: fixed; left: 0; top: 0; z-index: 39; background-repeat: no-repeat; pointer-events: none; transform-origin: 52% 88%; will-change: transform, background-position; }
 @media print { #pato, .pato-fx { display: none; } }
 @media (max-width: 639px) { #pato .pato-sombra { width: 62px; height: 16px; margin: -8px 0 0 -31px; } }
+
+/* Segundo plano: todas las animaciones en pausa (la clase la pone js/common.js) */
+html.en-fondo *, html.en-fondo *::before, html.en-fondo *::after { animation-play-state: paused !important; }
